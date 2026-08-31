@@ -1,0 +1,1 @@
+from .legacy_checkpoint import enable_legacy_checkpointing

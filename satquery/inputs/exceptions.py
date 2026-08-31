@@ -1,0 +1,2 @@
+class SatQueryInputError(Exception):
+    pass
