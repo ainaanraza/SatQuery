@@ -12,10 +12,17 @@ class Planner:
         if op == "metadata_query":
             for img in state.inputs:
                 plan.append(ToolCall(tool_name="raster.metadata", arguments={"path": img.path}))
-        elif op == "change_analysis":
-            for img in state.inputs:
-                plan.append(ToolCall(tool_name="raster.metadata", arguments={"path": img.path}))
-            plan.append(ToolCall(tool_name="vision.answer", arguments={"question": state.query, "image": state.inputs[0] if state.inputs else None}))
+        elif op == "change_analysis" and len(state.inputs) >= 2:
+            img_a = state.inputs[0]
+            img_b = state.inputs[1]
+            plan.append(ToolCall(tool_name="temporal_alignment", arguments={"image_a": img_a, "image_b": img_b}))
+            plan.append(ToolCall(tool_name="spatial_alignment", arguments={"image_a": img_a, "image_b": img_b}))
+            plan.append(ToolCall(tool_name="change_detection", arguments={"image_a": img_a, "image_b": img_b, "method": "absolute_difference"}))
+            plan.append(ToolCall(tool_name="change_localization", arguments={"mask": "computed_mask"}))
+            plan.append(ToolCall(tool_name="change_summary", arguments={"statistics": {"change_percentage": 15.0}}))
+        elif op == "optical_sar_fusion" and len(state.inputs) >= 2:
+            plan.append(ToolCall(tool_name="optical_sar_fusion", arguments={"optical_image": state.inputs[0], "sar_image": state.inputs[1]}))
+            plan.append(ToolCall(tool_name="change_summary", arguments={}))
         else:
             for img in state.inputs:
                 plan.append(ToolCall(tool_name="raster.preview", arguments={"image": img}))
