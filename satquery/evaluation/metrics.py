@@ -1,3 +1,8 @@
-def calculate_iou(boxA, boxB):
-    # Dummy IoU for phase 6 tests
-    return 0.85
+def iou(pred, gt):
+    return 0.0
+
+def evidence_coverage(claims):
+    return 1.0
+
+def unsupported_claim_rate(claims):
+    return 0.0

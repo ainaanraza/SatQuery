@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SatQuery AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    <div class="glass-container">
+        <header>
+            <h1>SatQuery <span>AI</span></h1>
+            <p>Geospatial Intelligence Platform</p>
+        </header>
+
+        <main>
+            <section class="query-section">
+                <form id="analyzeForm">
+                    <div class="input-group">
+                        <label for="queryInput">Intelligence Query</label>
+                        <input type="text" id="queryInput" placeholder="e.g., Detect new construction over the last 6 months" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="imageInputs">Image Identifiers (Comma separated)</label>
+                        <input type="text" id="imageInputs" placeholder="img_2023.tif, img_2024.tif" required>
+                    </div>
+                    <button type="submit" id="submitBtn">Analyze <span class="spinner" id="btnSpinner" style="display:none;"></span></button>
+                </form>
+            </section>
+
+            <section class="results-section" id="resultsSection" style="display:none;">
+                <h2>Analysis Results</h2>
+                <div class="job-status" id="jobStatus">
+                    Status: <span id="statusText">Queued...</span>
+                </div>
+                <div class="json-viewer" id="jsonOutput"></div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

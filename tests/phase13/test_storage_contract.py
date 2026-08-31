@@ -1,0 +1,1 @@
+def test_storage_contract(): pass

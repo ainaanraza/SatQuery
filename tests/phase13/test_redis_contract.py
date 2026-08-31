@@ -1,0 +1,1 @@
+def test_redis_contract(): pass

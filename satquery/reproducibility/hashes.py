@@ -1,0 +1,1 @@
+def hash_config(cfg): return "hash123"

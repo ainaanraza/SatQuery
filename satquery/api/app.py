@@ -1,9 +1,19 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from satquery.jobs.manager import JobManager
 
 app = FastAPI(title="SatQuery AI API", description="Phase 6 Intelligence API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 job_manager = JobManager()
 
 class AnalyzeRequest(BaseModel):
