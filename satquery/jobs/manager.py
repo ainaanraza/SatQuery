@@ -14,5 +14,24 @@ class JobManager:
         
     def execute_sync(self, job_id):
         if job_id in self.jobs:
-            self.jobs[job_id]["status"] = "completed"
-            self.jobs[job_id]["result"] = "Sync execution complete."
+            req = self.jobs[job_id]["request"]
+            query = req.get("query", "")
+            inputs = req.get("inputs", [])
+            
+            try:
+                from satquery.agent import SatQueryAgent
+                agent = SatQueryAgent()
+                response = agent.run(query=query, inputs=inputs)
+                
+                # Convert dataclass to dict for JSON serialization
+                result_dict = {
+                    "answer": response.answer,
+                    "evidence": [vars(ev) for ev in response.evidence],
+                    "limitations": response.limitations
+                }
+                
+                self.jobs[job_id]["status"] = "completed"
+                self.jobs[job_id]["result"] = result_dict
+            except Exception as e:
+                self.jobs[job_id]["status"] = "failed"
+                self.jobs[job_id]["error"] = str(e)
