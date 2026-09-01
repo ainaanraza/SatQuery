@@ -3,45 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SatQuery AI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>SatQuery AI — Multimodal Remote Sensing Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="background-container">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
+    <div class="space-background">
+        <div class="stars"></div>
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+        <div class="grid-overlay"></div>
     </div>
-    <div class="glass-container">
-        <header>
-            <h1>SatQuery <span>AI</span></h1>
-            <p>Geospatial Intelligence Platform</p>
+
+    <div class="app-container">
+        <!-- Top Navigation Bar -->
+        <header class="topbar">
+            <div class="brand">
+                <div class="logo-orbit">
+                    <span class="satellite-icon">🛰️</span>
+                </div>
+                <div>
+                    <h1 class="brand-title">SatQuery <span class="badge-ai">AI</span></h1>
+                    <p class="brand-subtitle">Multimodal Vision-Language Remote Sensing Assistant</p>
+                </div>
+            </div>
+            
+            <div class="topbar-status">
+                <div class="status-pill">
+                    <span class="pulse-dot"></span>
+                    <span id="backendStatus">RS-LLaVA-1.5-7B (4-Bit GPU) Online</span>
+                </div>
+                <div class="hackathon-tag">ISRO AI 2026</div>
+            </div>
         </header>
 
-        <main>
-            <section class="query-section">
+        <!-- Main Workspace Grid -->
+        <main class="workspace-grid">
+            <!-- Left Panel: Query & Ingestion Control -->
+            <section class="glass-card control-panel">
+                <div class="panel-header">
+                    <h2><span class="step-num">01</span> Mission Control & Query</h2>
+                    <p class="panel-desc">Formulate natural language questions or select from specialist presets.</p>
+                </div>
+
+                <!-- Quick Preset Chips -->
+                <div class="preset-section">
+                    <label class="section-label">⚡ Quick Remote-Sensing Presets</label>
+                    <div class="chips-container">
+                        <button type="button" class="preset-chip" data-query="Describe the landscape, vegetation, and infrastructure visible in this satellite scene." data-image="demo_satellite.tif">
+                            🌾 Land-Use & Crops
+                        </button>
+                        <button type="button" class="preset-chip" data-query="Detect all maritime structures, docks, vessels, and harbor infrastructure." data-image="test1.tif">
+                            ⚓ Harbor & Maritime
+                        </button>
+                        <button type="button" class="preset-chip" data-query="Identify bi-temporal urban expansion and new construction between T1 and T2." data-image="demo_satellite.tif, test1.tif">
+                            🏗️ Change Detection (T1/T2)
+                        </button>
+                        <button type="button" class="preset-chip" data-query="Perform optical and SAR fusion to verify flooded structures." data-image="demo_satellite.tif, test1.tif">
+                            🛰️ Optical + SAR Fusion
+                        </button>
+                    </div>
+                </div>
+
                 <form id="analyzeForm">
                     <div class="input-group">
-                        <label for="queryInput">Intelligence Query</label>
-                        <input type="text" id="queryInput" placeholder="e.g., Detect new construction over the last 6 months" required>
+                        <label for="queryInput">Natural Language Query</label>
+                        <textarea id="queryInput" rows="3" placeholder="e.g., Identify water bodies, road connectivity, and agricultural density in this scene..." required></textarea>
                     </div>
+
                     <div class="input-group">
-                        <label for="imageInputs">Image Identifiers (Comma separated)</label>
-                        <input type="text" id="imageInputs" placeholder="img_2023.tif, img_2024.tif" required>
+                        <label for="imageInputs">Satellite Raster Identifiers (GeoTIFF / Multi-Band)</label>
+                        <div class="input-with-presets">
+                            <input type="text" id="imageInputs" placeholder="demo_satellite.tif, test1.tif" value="demo_satellite.tif" required>
+                        </div>
+                        <div class="file-badges">
+                            <span class="file-badge" onclick="setImage('demo_satellite.tif')">📄 demo_satellite.tif</span>
+                            <span class="file-badge" onclick="setImage('test1.tif')">📄 test1.tif</span>
+                            <span class="file-badge" onclick="setImage('demo_satellite.tif, test1.tif')">📑 Bi-Temporal Pair</span>
+                        </div>
                     </div>
-                    <button type="submit" id="submitBtn">Analyze <span class="spinner" id="btnSpinner" style="display:none;"></span></button>
+
+                    <button type="submit" id="submitBtn" class="glow-button">
+                        <span class="btn-text">Execute Geospatial Intelligence</span>
+                        <span class="spinner" id="btnSpinner" style="display:none;"></span>
+                    </button>
                 </form>
+
+                <!-- Pipeline Status Progress -->
+                <div class="pipeline-tracker" id="pipelineTracker" style="display: none;">
+                    <label class="section-label">Pipeline Execution Status</label>
+                    <div class="step-nodes">
+                        <div class="node active" id="step1">
+                            <span class="node-icon">1</span>
+                            <span>Ingest Raster</span>
+                        </div>
+                        <div class="node-line"></div>
+                        <div class="node active" id="step2">
+                            <span class="node-icon">2</span>
+                            <span>Agent Plan</span>
+                        </div>
+                        <div class="node-line"></div>
+                        <div class="node active" id="step3">
+                            <span class="node-icon">3</span>
+                            <span>RS-LLaVA VLM</span>
+                        </div>
+                        <div class="node-line"></div>
+                        <div class="node active" id="step4">
+                            <span class="node-icon">4</span>
+                            <span>Evidence Graph</span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
-            <section class="results-section" id="resultsSection" style="display:none;">
-                <h2>Analysis Results</h2>
-                <div class="job-status" id="jobStatus">
-                    Status: <span id="statusText">Queued...</span>
+            <!-- Right Panel: Intelligence Synthesis & Evidence Graph -->
+            <section class="glass-card results-panel" id="resultsSection" style="display: none;">
+                <div class="panel-header">
+                    <h2><span class="step-num">02</span> Intelligence Synthesis & Evidence</h2>
+                    <div class="status-indicator">
+                        <span class="status-badge" id="statusBadge">Processing...</span>
+                    </div>
                 </div>
-                <div class="json-viewer" id="jsonOutput"></div>
+
+                <!-- Executive AI Summary Card -->
+                <div class="summary-card" id="summaryCard">
+                    <div class="summary-header">
+                        <span class="card-tag">🤖 Multimodal VLM Synthesis</span>
+                        <div class="confidence-badge" id="confidenceBadge">
+                            <span class="confidence-val">Confidence: 92%</span>
+                        </div>
+                    </div>
+                    <div class="ai-answer-box" id="aiAnswer">
+                        Synthesizing remote sensing observations...
+                    </div>
+                </div>
+
+                <!-- Verifiable Evidence Graph Card -->
+                <div class="evidence-card">
+                    <div class="card-header-row">
+                        <h3>🛡️ Verifiable Evidence Graph</h3>
+                        <span class="integrity-badge">Absolute Integrity Enforced</span>
+                    </div>
+                    
+                    <div class="evidence-nodes-list" id="evidenceNodes">
+                        <!-- Dynamically filled with nodes -->
+                    </div>
+                </div>
+
+                <!-- Raw JSON Toggle -->
+                <div class="json-toggle-section">
+                    <button type="button" class="btn-secondary" id="toggleJsonBtn">
+                        <span id="toggleJsonText">🔍 View Full Verification JSON</span>
+                    </button>
+                    <div class="json-viewer-wrapper" id="jsonViewerWrapper" style="display: none;">
+                        <pre class="json-viewer" id="jsonOutput"></pre>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>
