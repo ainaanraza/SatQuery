@@ -1,1 +1,0 @@
-def test_branding(): pass

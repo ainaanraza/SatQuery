@@ -1,1 +1,0 @@
-def test_phase_contracts(): pass

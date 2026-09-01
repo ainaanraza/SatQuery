@@ -151,15 +151,16 @@ python -m satquery.create_demo_raster
 
 ---
 
-## 🏗️ 14-Phase Architecture Breakdown
+## Modular System Architecture Breakdown
 
 ```
 SatQuery AI Architecture:
-├── Phase 1-4:  Geospatial Ingestion (Rasterio), Agent Orchestrator, Temporal Series
-├── Phase 5-7:  Optical/SAR Cross-Modal Fusion, Model Registry, REST API (/analyze)
-├── Phase 8-10: Benchmarking Infrastructure (VRSBench, RSVQA), Metric Tracking (BLEU/IoU)
-├── Phase 11-13: Security Hardening, Prompt Sanitization, Coordinate Evidence Graphs
-└── Phase 14:   Web GUI Mission Control Dashboard, 4-Bit RS-LLaVA GPU Integration
+├── Geospatial Core:     Memory-Safe Raster Ingestion (Rasterio), Multi-Band Normalization, CRS
+├── Agentic Core:        Intent Parser, Dynamic Task Planner, Capability-Based Executor
+├── Analytical Tools:    Optical/SAR Fusion, Bi-Temporal Change Detection, TemporalSeries Engine
+├── Intelligence Layer:  HuggingFace Provider Registry, 4-Bit RS-LLaVA VLM (BigEarthNet)
+├── Verification Layer:  Verifiable Coordinate Grounding, EvidenceGraph, Zero-Hallucination Guard
+└── Interface Layer:     FastAPI Async Job API, Mission Control Glassmorphic Web Dashboard
 ```
 
 ---

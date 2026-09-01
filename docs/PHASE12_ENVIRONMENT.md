@@ -1,9 +1,0 @@
-# SatQuery AI — Phase 12 Environment
-Hardware: CPU
-RAM: Available
-GPU: NOT EVALUATED
-CUDA: NOT EVALUATED
-VRAM: NOT EVALUATED
-PostgreSQL: NOT EVALUATED
-Redis: NOT EVALUATED
-Docker: NOT EVALUATED

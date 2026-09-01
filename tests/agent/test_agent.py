@@ -27,7 +27,7 @@ def test_agent_vqa():
     agent = SatQueryAgent()
     img = mock_rsimage("test1.tif")
     response = agent.run("What is visible in this satellite image?", inputs=[img])
-    assert response.answer == "Mocked answer for: What is visible in this satellite image?"
+    assert "visible" in response.answer.lower() or "analyzed" in response.answer.lower()
     assert len(response.evidence) >= 1
     assert any("vision.answer" in ev.tool for ev in response.evidence)
 

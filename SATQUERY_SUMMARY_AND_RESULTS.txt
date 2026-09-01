@@ -21,39 +21,39 @@ Rather than relying solely on a generic vision model, SatQuery combines:
    answer to coordinate bounds, CRS transforms, and tool execution logs.
 
 
-2. ARCHITECTURE & DELIVERABLES (PHASES 1 - 14)
+2. SYSTEM ARCHITECTURE & CORE MODULES
 --------------------------------------------------------------------------------
-Phase 1: Geospatial Ingestion Foundation
-  - Memory-safe GeoTIFF loading and windowed chunking via rasterio abstractions.
-  - CRS and Affine transform parsing.
+1. Geospatial Ingestion Foundation:
+   - Memory-safe GeoTIFF loading and windowed chunking via rasterio abstractions.
+   - CRS and Affine transform parsing with sub-pixel alignment.
 
-Phase 2: Agentic Orchestration
-  - Dynamic Planner, IntentParser, and Executor mapping natural-language queries
-    into verifiable N-step tool execution trees.
+2. Autonomous Agentic Orchestrator:
+   - Dynamic Planner, IntentParser, and Executor mapping natural-language queries
+     into verifiable N-step tool execution trees.
 
-Phase 3: Analytical Intelligence
-  - Tool-sets for Bi-Temporal Change Detection, Spatial Alignment, Bounding Box
-    Localization, and Deterministic Optical/SAR Fusion.
+3. Analytical & Geospatial Intelligence:
+   - Tool-sets for Bi-Temporal Change Detection, Spatial Alignment, Bounding Box
+     Localization, and Deterministic Optical/SAR Fusion.
 
-Phase 4: Temporal Series Engine
-  - TemporalSeries abstractions for multi-epoch chronological alignment, persistent
-    region tracking, and trend analysis.
+4. Temporal Series Engine:
+   - TemporalSeries abstractions for multi-epoch chronological alignment, persistent
+     region tracking, and trend analysis.
 
-Phases 5-7: Multimodal Reasoning & API
-  - Ingestion of co-registered SAR & Optical grids.
-  - FastAPI REST server (/analyze, /analyze/{id}) with CORS and async job management.
+5. Multimodal Reasoning & REST API:
+   - Ingestion of co-registered SAR & Optical grids.
+   - FastAPI REST server (/analyze, /analyze/{id}) with CORS and async job management.
 
-Phases 8-10: Benchmarking Infrastructure
-  - Automated evaluation harnesses for public RS datasets (VRSBench, RSVQA, CDVQA),
-    measuring BLEU, Precision, and Accuracy.
+6. Evaluation & Benchmarking Infrastructure:
+   - Automated evaluation harnesses for public RS datasets (VRSBench, RSVQA, CDVQA),
+     measuring BLEU, Precision, and Accuracy.
 
-Phases 11-13: Security & Evidence Graph
-  - Absolute Integrity Rule enforcement (EvidenceGraph mapping every claim to raster pixels).
-  - Prompt injection sanitization and memory boundary checks.
+7. Security Hardening & Evidence Graph:
+   - Absolute Integrity Rule enforcement (EvidenceGraph mapping every claim to raster pixels).
+   - Prompt injection sanitization and memory boundary checks.
 
-Phase 14: Release Candidate & Web GUI
-  - Glassmorphism Web Dashboard (index.html, style.css, app.js) with dynamic status
-    polling and live JSON output viewer.
+8. Interactive Mission Control Web GUI:
+   - Glassmorphism Web Dashboard (index.html, style.css, app.js) with dynamic status
+     polling, visual node tracking, and live JSON output viewer.
 
 
 3. MULTIMODAL MODEL ARCHITECTURE
