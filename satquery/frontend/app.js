@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://mazda-kentucky-sim-bids.trycloudflare.com';
+const API_BASE_URL = 'https://courier-perfume-wishlist-similarly.trycloudflare.com';
 
 
 document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
