@@ -24,7 +24,7 @@ if (toggleJsonBtn) {
     toggleJsonBtn.addEventListener('click', () => {
         const isHidden = jsonViewerWrapper.style.display === 'none';
         jsonViewerWrapper.style.display = isHidden ? 'block' : 'none';
-        toggleJsonText.textContent = isHidden ? '▲ Hide Raw Verification JSON' : '🔍 View Full Verification JSON';
+        toggleJsonText.textContent = isHidden ? 'Hide Raw Verification JSON' : 'View Full Verification JSON';
     });
 }
 
@@ -110,7 +110,7 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
                 // Format AI Answer
                 aiAnswer.textContent = result.answer || 'Analysis complete.';
                 
-                // Format Evidence Nodes
+                // Format Evidence Nodes (clean and professional)
                 const evidenceList = result.evidence || [];
                 if (evidenceList.length > 0) {
                     evidenceNodes.innerHTML = evidenceList.map((ev, idx) => `
@@ -118,7 +118,7 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
                             <div class="node-left">
                                 <span class="node-tag">NODE ${idx + 1}</span>
                                 <div>
-                                    <div class="node-src">📄 ${ev.source || 'Raster Layer'}</div>
+                                    <div class="node-src">${ev.source || 'Raster Layer'}</div>
                                     <div class="node-tool">Tool: <code>${ev.tool || 'inference'}</code></div>
                                 </div>
                             </div>

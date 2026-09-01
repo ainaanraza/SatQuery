@@ -36,7 +36,6 @@
                     <span class="pulse-dot"></span>
                     <span id="backendStatus">RS-LLaVA-1.5-7B (4-Bit GPU) Online</span>
                 </div>
-                <div class="hackathon-tag">ISRO AI 2026</div>
             </div>
         </header>
 
@@ -51,19 +50,19 @@
 
                 <!-- Quick Preset Chips -->
                 <div class="preset-section">
-                    <label class="section-label">⚡ Quick Remote-Sensing Presets</label>
+                    <label class="section-label">Preset Workflows</label>
                     <div class="chips-container">
                         <button type="button" class="preset-chip" data-query="Describe the landscape, vegetation, and infrastructure visible in this satellite scene." data-image="demo_satellite.tif">
-                            🌾 Land-Use & Crops
+                            Land-Use & Crops
                         </button>
                         <button type="button" class="preset-chip" data-query="Detect all maritime structures, docks, vessels, and harbor infrastructure." data-image="test1.tif">
-                            ⚓ Harbor & Maritime
+                            Harbor & Maritime
                         </button>
                         <button type="button" class="preset-chip" data-query="Identify bi-temporal urban expansion and new construction between T1 and T2." data-image="demo_satellite.tif, test1.tif">
-                            🏗️ Change Detection (T1/T2)
+                            Change Detection (T1/T2)
                         </button>
                         <button type="button" class="preset-chip" data-query="Perform optical and SAR fusion to verify flooded structures." data-image="demo_satellite.tif, test1.tif">
-                            🛰️ Optical + SAR Fusion
+                            Optical + SAR Fusion
                         </button>
                     </div>
                 </div>
@@ -80,9 +79,9 @@
                             <input type="text" id="imageInputs" placeholder="demo_satellite.tif, test1.tif" value="demo_satellite.tif" required>
                         </div>
                         <div class="file-badges">
-                            <span class="file-badge" onclick="setImage('demo_satellite.tif')">📄 demo_satellite.tif</span>
-                            <span class="file-badge" onclick="setImage('test1.tif')">📄 test1.tif</span>
-                            <span class="file-badge" onclick="setImage('demo_satellite.tif, test1.tif')">📑 Bi-Temporal Pair</span>
+                            <span class="file-badge" onclick="setImage('demo_satellite.tif')">demo_satellite.tif</span>
+                            <span class="file-badge" onclick="setImage('test1.tif')">test1.tif</span>
+                            <span class="file-badge" onclick="setImage('demo_satellite.tif, test1.tif')">Bi-Temporal Pair</span>
                         </div>
                     </div>
 
@@ -131,7 +130,7 @@
                 <!-- Executive AI Summary Card -->
                 <div class="summary-card" id="summaryCard">
                     <div class="summary-header">
-                        <span class="card-tag">🤖 Multimodal VLM Synthesis</span>
+                        <span class="card-tag">Multimodal VLM Synthesis</span>
                         <div class="confidence-badge" id="confidenceBadge">
                             <span class="confidence-val">Confidence: 92%</span>
                         </div>
@@ -144,7 +143,7 @@
                 <!-- Verifiable Evidence Graph Card -->
                 <div class="evidence-card">
                     <div class="card-header-row">
-                        <h3>🛡️ Verifiable Evidence Graph</h3>
+                        <h3>Verifiable Evidence Graph</h3>
                         <span class="integrity-badge">Absolute Integrity Enforced</span>
                     </div>
                     
@@ -156,7 +155,7 @@
                 <!-- Raw JSON Toggle -->
                 <div class="json-toggle-section">
                     <button type="button" class="btn-secondary" id="toggleJsonBtn">
-                        <span id="toggleJsonText">🔍 View Full Verification JSON</span>
+                        <span id="toggleJsonText">View Full Verification JSON</span>
                     </button>
                     <div class="json-viewer-wrapper" id="jsonViewerWrapper" style="display: none;">
                         <pre class="json-viewer" id="jsonOutput"></pre>
