@@ -183,4 +183,4 @@ SatQuery AI Architecture:
 ```
 
 ---
-*Built for the ISRO Remote Sensing AI Hackathon.*
+*Built for the ISRO Remote Sensing.*
