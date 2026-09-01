@@ -1,6 +1,8 @@
 def iou(pred, gt):
     return 0.0
 
+calculate_iou = iou
+
 def evidence_coverage(claims):
     return 1.0
 
