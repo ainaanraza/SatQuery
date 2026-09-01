@@ -2,6 +2,12 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, List
 
 @dataclass
+class ModelInferenceRequest:
+    prompt: str = ""
+    image_paths: List[str] = field(default_factory=list)
+    parameters: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
 class ModelInferenceResult:
     status: str
     provider: str
