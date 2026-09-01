@@ -17,8 +17,9 @@ class HuggingFaceLLaVAProvider(MultimodalModelProvider):
             import torch
             from transformers import AutoProcessor, LlavaForConditionalGeneration, BitsAndBytesConfig
             
-            model_id = "BigData-KSU/RS-llava-v1.5-7b-LoRA"
-            logger.info(f"Loading {model_id} in 4-bit for Remote Sensing inference...")
+            base_model_id = "llava-hf/llava-1.5-7b-hf"
+            adapter_id = "BigData-KSU/RS-llava-v1.5-7b-LoRA"
+            logger.info(f"Loading {base_model_id} with {adapter_id} in 4-bit...")
             
             quantization_config = BitsAndBytesConfig(
                 load_in_4bit=True,
@@ -26,12 +27,19 @@ class HuggingFaceLLaVAProvider(MultimodalModelProvider):
                 bnb_4bit_quant_type="nf4"
             )
             
-            self.processor = AutoProcessor.from_pretrained(model_id)
-            self.model = LlavaForConditionalGeneration.from_pretrained(
-                model_id,
+            self.processor = AutoProcessor.from_pretrained(base_model_id)
+            base_model = LlavaForConditionalGeneration.from_pretrained(
+                base_model_id,
                 quantization_config=quantization_config,
                 device_map="auto"
             )
+            try:
+                from peft import PeftModel
+                self.model = PeftModel.from_pretrained(base_model, adapter_id)
+                logger.info("Successfully attached BigEarthNet RS-llava LoRA adapter!")
+            except Exception as peft_err:
+                logger.warning(f"Running on base LLaVA model: {peft_err}")
+                self.model = base_model
             self.status = "READY"
         except Exception as e:
             self.status = f"FAILED: {str(e)}"
