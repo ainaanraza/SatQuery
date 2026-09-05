@@ -105,3 +105,62 @@ def test_executor_passes_change_mask_to_localization(tmp_path):
 
     assert localization_result.success is True
     assert localization_result.data["changed_pixel_count"] == 1
+
+
+def test_executor_skips_change_detection_when_spatial_alignment_fails():
+    class FakeSpatialAlignmentTool:
+        name = "spatial_alignment"
+
+        def execute(self, context, arguments):
+            from satquery.tools.base import ToolResult
+
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                errors=["Images are not spatially compatible"]
+            )
+
+    class FakeChangeDetectionTool:
+        name = "change_detection"
+        called = False
+
+        def execute(self, context, arguments):
+            self.called = True
+
+            from satquery.tools.base import ToolResult
+
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={"changed_pixel_count": 999}
+            )
+
+    spatial_tool = FakeSpatialAlignmentTool()
+    change_tool = FakeChangeDetectionTool()
+
+    registry = ToolRegistry()
+    registry.register(spatial_tool)
+    registry.register(change_tool)
+
+    state = AgentState(
+        query="What changed?",
+        plan=[
+            ToolCall(
+                tool_name="spatial_alignment",
+                arguments={}
+            ),
+            ToolCall(
+                tool_name="change_detection",
+                arguments={}
+            )
+        ]
+    )
+
+    executor = Executor(registry)
+    executor.execute(state)
+
+    assert change_tool.called is False
+    assert len(state.results) == 1
+    assert state.results[0].tool_name == "spatial_alignment"
+    assert state.results[0].success is False
+    assert "spatial alignment failed" in state.errors[-1]    
