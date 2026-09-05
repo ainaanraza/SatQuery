@@ -14,6 +14,7 @@ class SpatialAlignmentTool(SatQueryTool):
 
         same_crs = (img_a.crs == img_b.crs)
         same_resolution = (img_a.resolution_x == img_b.resolution_x and img_a.resolution_y == img_b.resolution_y)
+        grid_aligned = img_a.transform == img_b.transform
         
         # Simple overlap check
         a_minx, a_miny, a_maxx, a_maxy = img_a.bounds
@@ -23,11 +24,12 @@ class SpatialAlignmentTool(SatQueryTool):
         overlap_y = (a_miny < b_maxy and a_maxy > b_miny)
         overlap = overlap_x and overlap_y
 
-        compatible = same_crs and same_resolution and overlap
+        compatible = same_crs and same_resolution and grid_aligned and overlap
         
         data = {
             "same_crs": same_crs,
             "same_resolution": same_resolution,
+            "grid_aligned": grid_aligned,
             "overlap": overlap,
             "compatible": compatible
         }
