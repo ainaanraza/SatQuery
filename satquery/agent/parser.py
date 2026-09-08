@@ -26,7 +26,10 @@ class QueryUnderstandingBackend:
             req = ["image_a", "image_b"]
         elif "sensor" in q or "resolution" in q or "metadata" in q:
             op = "metadata_query"
-            
+        elif any(kw in q for kw in ["describe this image", "describe the scene", "scene description", "what is visible", "give me a scene description", "describe the land cover"]):
+            op = "scene_description"
+            req = ["image"]
+
         return ParsedQuery(
             query=query,
             entities=[],

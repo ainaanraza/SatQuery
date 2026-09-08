@@ -1,0 +1,5 @@
+# Claude config directory
+.claude/
+
+# Local task file
+task.txt

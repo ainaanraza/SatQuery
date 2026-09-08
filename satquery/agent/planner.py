@@ -20,6 +20,10 @@ class Planner:
             plan.append(ToolCall(tool_name="change_detection", arguments={"image_a": img_a, "image_b": img_b, "method": "absolute_difference"}))
             plan.append(ToolCall(tool_name="change_localization", arguments={"mask": "computed_mask"}))
             plan.append(ToolCall(tool_name="change_summary", arguments={"statistics": {"change_percentage": 15.0}}))
+        elif op == "scene_description":
+            for img in state.inputs:
+                plan.append(ToolCall(tool_name="raster.preview", arguments={"image": img}))
+            plan.append(ToolCall(tool_name="vision.answer", arguments={"question": "Provide a detailed scene description of this satellite image, covering land cover, visible objects, and spatial layout.", "image": state.inputs[0] if state.inputs else None}))
         elif op == "optical_sar_fusion" and len(state.inputs) >= 2:
             plan.append(ToolCall(tool_name="optical_sar_fusion", arguments={"optical_image": state.inputs[0], "sar_image": state.inputs[1]}))
             plan.append(ToolCall(tool_name="change_summary", arguments={}))
