@@ -1,10 +1,11 @@
 import os
-from typing import List
+from typing import List, Optional
 from satquery.inputs.models import RSImage
 from satquery.inputs.raster_loader import load_raster
+from satquery.inputs.validator import validate_raster_input
 
 class InputResolver:
-    def resolve(self, inputs: List[str]) -> List[RSImage]:
+    def resolve(self, inputs: List[str], errors: Optional[List[str]] = None) -> List[RSImage]:
         resolved = []
         for inp in inputs:
             candidate_paths = [
@@ -16,6 +17,11 @@ class InputResolver:
             loaded = False
             for p in candidate_paths:
                 if os.path.exists(p):
+                    validation = validate_raster_input(p)
+                    if not validation.valid:
+                        if errors is not None:
+                            errors.extend(validation.errors)
+                        continue
                     try:
                         resolved.append(load_raster(p))
                         loaded = True
@@ -25,7 +31,13 @@ class InputResolver:
             if not loaded:
                 # If still not found, try loading directly with fallback
                 try:
-                    resolved.append(load_raster(inp))
+                    validation = validate_raster_input(inp)
+                    if not validation.valid:
+                        if errors is not None:
+                            errors.extend(validation.errors)
+                        continue
+                    if validation.valid:
+                        resolved.append(load_raster(inp))
                 except Exception:
                     pass
         return resolved
