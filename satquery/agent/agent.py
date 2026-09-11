@@ -27,7 +27,7 @@ class SatQueryAgent:
         resolved_inputs = []
         for i in inputs:
             if isinstance(i, str):
-                resolved = self.resolver.resolve([i])
+                resolved = self.resolver.resolve([i], errors=state.errors)
                 resolved_inputs.extend(resolved)
             else:
                 resolved_inputs.append(i)

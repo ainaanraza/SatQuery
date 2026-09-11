@@ -69,3 +69,40 @@ def test_scene_description_land_cover_query():
     parsed = backend.parse("Describe the land cover and major objects visible in this satellite image")
     assert parsed.operation == "scene_description"
     assert "image" in parsed.required_inputs
+
+
+def test_missing_input_path_error_survives():
+    """A missing input path produces a validation error that survives into the agent state/final response."""
+    agent = SatQueryAgent()
+    response = agent.run("What is in this image?", inputs=["nonexistent_file.tif"])
+    # The validation error should be captured and appear in the answer
+    assert response is not None
+    assert "Failed due to errors" in response.answer
+    assert any("does not exist" in err for err in [response.answer])
+
+
+def test_unsupported_file_type_error_survives():
+    """An unsupported file type produces a validation error that survives into the agent state/final response."""
+    import tempfile
+    import os
+    agent = SatQueryAgent()
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
+        f.write(b"not a raster")
+        path = f.name
+    try:
+        response = agent.run("What is in this image?", inputs=[path])
+        assert response is not None
+        assert "Failed due to errors" in response.answer
+        assert any("Unsupported file type" in err for err in [response.answer])
+    finally:
+        os.unlink(path)
+
+
+def test_valid_raster_still_resolves():
+    """A valid raster still resolves successfully."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("What sensor captured this image?", inputs=[img])
+    assert response is not None
+    assert "Failed due to errors" not in response.answer
+    assert len(response.evidence) >= 1
