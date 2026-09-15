@@ -71,6 +71,69 @@ def test_scene_description_land_cover_query():
     assert "image" in parsed.required_inputs
 
 
+def test_scene_description_trace():
+    """A scene description request produces a trace with intent, tools, and evidence."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("Describe this image", inputs=[img])
+
+    assert response.trace is not None, "Response should contain an execution trace"
+
+    # 1. Detected task or intent
+    assert response.trace.detected_intent == "scene_description", (
+        f"Expected 'scene_description', got '{response.trace.detected_intent}'"
+    )
+    assert response.trace.intent_confidence is not None, (
+        "Trace should include intent confidence"
+    )
+
+    # 2 & 3. Tools selected and execution order
+    assert "raster.preview" in response.trace.tools, (
+        f"Trace should include 'raster.preview' in tools, got {response.trace.tools}"
+    )
+    assert "vision.answer" in response.trace.tools, (
+        f"Trace should include 'vision.answer' in tools, got {response.trace.tools}"
+    )
+    assert response.trace.tools.index("raster.preview") < response.trace.tools.index("vision.answer"), (
+        "raster.preview should execute before vision.answer"
+    )
+
+    # 4. Model used for inference
+    assert response.trace.model_used is not None, (
+        f"Trace should identify the model used, got model_used={response.trace.model_used}"
+    )
+
+    # 5. Relevant tool parameters
+    assert len(response.trace.tool_parameters) == len(response.trace.tools), (
+        "Each tool should have corresponding parameters"
+    )
+    vision_params = response.trace.tool_parameters[response.trace.tools.index("vision.answer")]
+    assert "question" in vision_params, (
+        f"vision.answer parameters should include 'question', got {vision_params}"
+    )
+    assert "image" in vision_params, (
+        f"vision.answer parameters should include 'image', got {vision_params}"
+    )
+
+    # 6. Evidence produced
+    assert len(response.trace.evidence) >= 1, (
+        "Trace should contain at least one evidence item"
+    )
+
+    # 7. Confidence information
+    assert response.trace.confidence is not None, (
+        "Trace should include confidence information"
+    )
+
+    # 8. Errors or warnings
+    assert isinstance(response.trace.errors, list), (
+        "Trace errors should be a list"
+    )
+    assert isinstance(response.trace.warnings, list), (
+        "Trace warnings should be a list"
+    )
+
+
 def test_missing_input_path_error_survives():
     """A missing input path produces a validation error that survives into the agent state/final response."""
     agent = SatQueryAgent()
@@ -106,3 +169,22 @@ def test_valid_raster_still_resolves():
     assert response is not None
     assert "Failed due to errors" not in response.answer
     assert len(response.evidence) >= 1
+
+
+def test_response_with_evidence_is_supported():
+    """A response that includes evidence is marked as supported."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("Describe this image", inputs=[img])
+    assert response.has_evidence is True
+    assert response.evidence_count >= 1
+    assert response.coverage_status == "supported"
+
+
+def test_response_without_evidence_is_insufficient():
+    """A response with no evidence is marked as insufficient_evidence."""
+    from satquery.agent.synthesizer import SatQueryResponse
+    response = SatQueryResponse(answer="No evidence available", evidence=[])
+    assert response.has_evidence is False
+    assert response.evidence_count == 0
+    assert response.coverage_status == "insufficient_evidence"

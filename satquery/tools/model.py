@@ -30,4 +30,15 @@ class VisionAnswerTool(SatQueryTool):
             tool=self.name,
             confidence=confidence
         )
-        return ToolResult(success=True, tool_name=self.name, data=data, evidence=[ev])
+        return ToolResult(
+            success=True,
+            tool_name=self.name,
+            data=data,
+            evidence=[ev],
+            metadata={
+                "model_provider": result.provider,
+                "model_id": result.model_id,
+                "model_version": result.model_version,
+                "model_confidence": confidence
+            }
+        )
