@@ -26,6 +26,17 @@ class Executor:
 
             arguments = dict(call.arguments)
 
+            # Pass semantic change output to CDVQA reasoner.
+            if call.tool_name == "cdvqa_reasoner":
+                for previous_result in reversed(state.results):
+                    if (
+                        previous_result.tool_name == "semantic_change"
+                        and previous_result.success
+                        and previous_result.data
+                    ):
+                        arguments["semantic_result"] = previous_result.data
+                        break
+
             # Pass the actual change mask produced by change detection
             # to the localization tool.
             if call.tool_name == "change_localization":

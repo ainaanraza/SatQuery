@@ -22,7 +22,32 @@ class QueryUnderstandingBackend:
             op = "optical_sar_fusion"
             req = ["image_a", "image_b"]
         elif temporal:
-            op = "change_analysis"
+            cdvqa_patterns = [
+                "did the areas of",
+                "did the regions of",
+                "did the area of",
+                "did the region of",
+                "have the areas of",
+                "have the regions of",
+                "have the area of",
+                "have the region of",
+                "what type of change",
+                "what is the largest change",
+                "what is the smallest change",
+                "what have the regions of",
+                "what have the areas of",
+                "what percentage of",
+                "what is the percentage of",
+                "change ratio",
+                "built-up area",
+                "built up area",
+            ]
+
+            if any(pattern in q for pattern in cdvqa_patterns):
+                op = "change_vqa"
+            else:
+                op = "change_analysis"
+
             req = ["image_a", "image_b"]
         elif "sensor" in q or "resolution" in q or "metadata" in q:
             op = "metadata_query"
