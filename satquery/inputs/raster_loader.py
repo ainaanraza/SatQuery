@@ -3,18 +3,52 @@ from .models import RSImage
 from .metadata import detect_modality, detect_sensor
 from datetime import datetime
 
+def _safe_transform(src):
+    """Convert rasterio's Affine transform to a serialization-safe tuple of 6 scalars."""
+    try:
+        t = src.transform
+        if t is None:
+            return None
+        try:
+            return tuple(t)
+        except TypeError:
+            return (t.a, t.b, t.c, t.d, t.e, t.f)
+    except TypeError:
+        return None
+
+def _safe_bounds(src, transform):
+    """Compute bounds tuple from transform if available, otherwise None."""
+    if transform is None:
+        return None
+    a, b, c, d, e, f = transform
+    width = src.width
+    height = src.height
+    left = c
+    top = f
+    right = c + width * a
+    bottom = f + height * e
+    return (left, bottom, right, top)
+
+def _safe_res(transform):
+    """Extract (res_x, res_y) from transform tuple if available."""
+    if transform is None:
+        return None, None
+    a, b, c, d, e, f = transform
+    return a, abs(e)
+
 def load_raster(path: str) -> RSImage:
     with rasterio.open(path) as src:
-        bounds = (src.bounds.left, src.bounds.bottom, src.bounds.right, src.bounds.top) if src.bounds else None
-        res_x, res_y = src.res if src.res else (None, None)
-        crs = src.crs.to_string() if src.crs else None
-        
         meta = src.tags()
         acq_time = None
-        
+
         modality = detect_modality(meta, src.descriptions)
         sensor = detect_sensor(meta)
-        
+
+        transform = _safe_transform(src)
+        bounds = _safe_bounds(src, transform)
+        res_x, res_y = _safe_res(transform)
+        crs = src.crs.to_string() if src.crs else None
+
         return RSImage(
             path=path,
             modality=modality,
@@ -22,7 +56,7 @@ def load_raster(path: str) -> RSImage:
             acquisition_time=acq_time,
             crs=crs,
             bounds=bounds,
-            transform=src.transform,
+            transform=transform,
             width=src.width,
             height=src.height,
             resolution_x=res_x,
