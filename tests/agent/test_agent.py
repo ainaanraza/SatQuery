@@ -188,3 +188,66 @@ def test_response_without_evidence_is_insufficient():
     assert response.has_evidence is False
     assert response.evidence_count == 0
     assert response.coverage_status == "insufficient_evidence"
+
+
+def test_evidence_provenance_preserved():
+    """Evidence provenance (source_type, tool, source, confidence) is exposed in the response."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("Describe this image", inputs=[img])
+
+    assert len(response.evidence_provenance) >= 1, (
+        "Response should have at least one provenance entry"
+    )
+
+    for entry in response.evidence_provenance:
+        assert "source_type" in entry, (
+            f"Provenance entry missing 'source_type': {entry}"
+        )
+        assert "tool" in entry, (
+            f"Provenance entry missing 'tool': {entry}"
+        )
+        assert "source" in entry, (
+            f"Provenance entry missing 'source': {entry}"
+        )
+        assert "confidence" in entry, (
+            f"Provenance entry missing 'confidence': {entry}"
+        )
+
+
+def test_scene_description_has_evidence():
+    """A scene description response still contains evidence."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("Describe this image", inputs=[img])
+
+    assert len(response.evidence) >= 1, (
+        "Scene description response should contain evidence"
+    )
+    assert any("vision.answer" in ev.tool for ev in response.evidence), (
+        "Scene description should have vision.answer evidence"
+    )
+
+
+def test_coverage_fields_still_work():
+    """Existing coverage fields (has_evidence, evidence_count, coverage_status) still work."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("Describe this image", inputs=[img])
+
+    assert response.has_evidence is True
+    assert response.evidence_count >= 1
+    assert response.coverage_status == "supported"
+
+
+def test_trace_still_passes():
+    """Existing execution trace tests still pass."""
+    agent = SatQueryAgent()
+    img = mock_rsimage("test1.tif")
+    response = agent.run("Describe this image", inputs=[img])
+
+    assert response.trace is not None
+    assert response.trace.detected_intent == "scene_description"
+    assert "raster.preview" in response.trace.tools
+    assert "vision.answer" in response.trace.tools
+    assert len(response.trace.evidence) >= 1

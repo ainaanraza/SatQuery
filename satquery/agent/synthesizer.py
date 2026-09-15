@@ -14,6 +14,7 @@ class SatQueryResponse:
     has_evidence: bool = False
     evidence_count: int = 0
     coverage_status: str = "insufficient_evidence"
+    evidence_provenance: list = field(default_factory=list)
 
 class Synthesizer:
     def synthesize(self, state: AgentState) -> SatQueryResponse:
@@ -39,6 +40,15 @@ class Synthesizer:
 
         trace = self._build_trace(state)
         evidence_count = len(state.evidence)
+        evidence_provenance = [
+            {
+                "source_type": ev.source_type,
+                "tool": ev.tool,
+                "source": ev.source,
+                "confidence": ev.confidence
+            }
+            for ev in state.evidence
+        ]
 
         return SatQueryResponse(
             answer=answer,
@@ -48,7 +58,8 @@ class Synthesizer:
             trace=trace,
             has_evidence=evidence_count > 0,
             evidence_count=evidence_count,
-            coverage_status="supported" if evidence_count > 0 else "insufficient_evidence"
+            coverage_status="supported" if evidence_count > 0 else "insufficient_evidence",
+            evidence_provenance=evidence_provenance
         )
 
     def _build_trace(self, state: AgentState) -> ExecutionTrace:

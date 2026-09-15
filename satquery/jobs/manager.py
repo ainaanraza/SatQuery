@@ -45,7 +45,8 @@ class JobManager:
                     "trace": trace_dict,
                     "has_evidence": response.has_evidence,
                     "evidence_count": response.evidence_count,
-                    "coverage_status": response.coverage_status
+                    "coverage_status": response.coverage_status,
+                    "evidence_provenance": response.evidence_provenance
                 }
                 
                 self.jobs[job_id]["status"] = "completed"
