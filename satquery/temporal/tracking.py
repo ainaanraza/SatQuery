@@ -1,7 +1,7 @@
 import uuid
 
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import numpy as np
 
@@ -12,6 +12,7 @@ class RegionTrack:
     geometries: List[Dict] = field(default_factory=list)
     timestamps: List[str] = field(default_factory=list)
     measurements: List[float] = field(default_factory=list)
+    observation_sides: List[str] = field(default_factory=list)
 
 
 def _find_regions(mask):
@@ -19,9 +20,11 @@ def _find_regions(mask):
 
     mask = np.asarray(mask, dtype=bool)
 
+    if mask.ndim != 2:
+        raise ValueError("Region mask must be a 2D array.")
+
     height, width = mask.shape
     visited = np.zeros_like(mask, dtype=bool)
-
     regions = []
 
     for row in range(height):
@@ -32,7 +35,6 @@ def _find_regions(mask):
 
             stack = [(row, col)]
             visited[row, col] = True
-
             pixels = []
 
             while stack:
@@ -47,7 +49,6 @@ def _find_regions(mask):
                 ]
 
                 for next_row, next_col in neighbours:
-
                     if (
                         0 <= next_row < height
                         and 0 <= next_col < width
@@ -76,7 +77,6 @@ def _region_iou(region_a, region_b):
 
     min_row = max(region_a["min_row"], region_b["min_row"])
     min_col = max(region_a["min_col"], region_b["min_col"])
-
     max_row = min(region_a["max_row"], region_b["max_row"])
     max_col = min(region_a["max_col"], region_b["max_col"])
 
@@ -103,8 +103,26 @@ def _region_iou(region_a, region_b):
     return intersection / union if union > 0 else 0.0
 
 
-def track_regions(t1_mask, t2_mask, threshold_iou=0.5):
+def track_regions(
+    t1_mask,
+    t2_mask,
+    threshold_iou=0.5,
+    t1_timestamp: Optional[str] = None,
+    t2_timestamp: Optional[str] = None,
+):
     """Track regions between two temporal masks using IoU."""
+
+    t1_mask = np.asarray(t1_mask, dtype=bool)
+    t2_mask = np.asarray(t2_mask, dtype=bool)
+
+    if t1_mask.ndim != 2 or t2_mask.ndim != 2:
+        raise ValueError("Temporal masks must be 2D arrays.")
+
+    if t1_mask.shape != t2_mask.shape:
+        raise ValueError("T1 and T2 masks must have the same dimensions.")
+
+    if not 0.0 <= threshold_iou <= 1.0:
+        raise ValueError("threshold_iou must be between 0 and 1.")
 
     t1_regions = _find_regions(t1_mask)
     t2_regions = _find_regions(t2_mask)
@@ -128,20 +146,30 @@ def track_regions(t1_mask, t2_mask, threshold_iou=0.5):
                 best_iou = iou
                 best_match = index
 
+        timestamps = []
+        if t1_timestamp is not None:
+            timestamps.append(str(t1_timestamp))
+
         track = RegionTrack(
             track_id=str(uuid.uuid4()),
             geometries=[region_a],
-            measurements=[float(region_a["pixel_count"])]
+            timestamps=timestamps,
+            measurements=[float(region_a["pixel_count"])],
+            observation_sides=["T1"],
         )
 
         if best_match is not None and best_iou >= threshold_iou:
 
             track.geometries.append(t2_regions[best_match])
 
+            if t2_timestamp is not None:
+                track.timestamps.append(str(t2_timestamp))
+
             track.measurements.append(
                 float(t2_regions[best_match]["pixel_count"])
             )
 
+            track.observation_sides.append("T2")
             matched_t2.add(best_match)
 
         tracks.append(track)
@@ -151,11 +179,17 @@ def track_regions(t1_mask, t2_mask, threshold_iou=0.5):
 
         if index not in matched_t2:
 
+            timestamps = []
+            if t2_timestamp is not None:
+                timestamps.append(str(t2_timestamp))
+
             tracks.append(
                 RegionTrack(
                     track_id=str(uuid.uuid4()),
                     geometries=[region_b],
-                    measurements=[float(region_b["pixel_count"])]
+                    timestamps=timestamps,
+                    measurements=[float(region_b["pixel_count"])],
+                    observation_sides=["T2"],
                 )
             )
 
