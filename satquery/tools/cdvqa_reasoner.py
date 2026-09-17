@@ -37,6 +37,20 @@ class CDVQAReasoner(SatQueryTool):
         ],
     }
 
+    def _normalize_class(self, name):
+        name = name.strip().lower()
+
+        aliases = {
+            "building": "buildings",
+            "buildings": "buildings",
+            "tree": "trees",
+            "trees": "trees",
+            "playground": "playgrounds",
+            "playgrounds": "playgrounds",
+        }
+
+        return aliases.get(name, name)
+
     def _find_class(self, question):
         q = question.lower()
 
@@ -67,12 +81,12 @@ class CDVQAReasoner(SatQueryTool):
         class_name = class_name.strip().lower()
 
         t1_counts = {
-            str(k).strip().lower(): v
+            self._normalize_class(str(k)): v
             for k, v in class_counts.get("t1", {}).items()
         }
 
         t2_counts = {
-            str(k).strip().lower(): v
+            self._normalize_class(str(k)): v
             for k, v in class_counts.get("t2", {}).items()
         }
 
@@ -221,10 +235,10 @@ class CDVQAReasoner(SatQueryTool):
                     continue
 
                 source, target = transition.split("->", 1)
-                source = source.strip().lower()
-                target = target.strip().lower()
+                source = self._normalize_class(source)
+                target = self._normalize_class(target)
 
-                if source == class_name:
+                if source == self._normalize_class(class_name):
                     candidates[target] = (
                         candidates.get(target, 0) + count
                     )
@@ -270,12 +284,12 @@ class CDVQAReasoner(SatQueryTool):
             class_counts = arguments.get("class_counts", {})
 
             t1_counts = {
-                str(k).strip().lower(): v
+                self._normalize_class(str(k)): v
                 for k, v in class_counts.get("t1", {}).items()
             }
 
             t2_counts = {
-                str(k).strip().lower(): v
+                self._normalize_class(str(k)): v
                 for k, v in class_counts.get("t2", {}).items()
             }
 
@@ -286,7 +300,7 @@ class CDVQAReasoner(SatQueryTool):
             )
 
             total_class_pixels = target_counts.get(
-                class_name.strip().lower(),
+                self._normalize_class(class_name),
                 0,
             )
 
@@ -303,9 +317,9 @@ class CDVQAReasoner(SatQueryTool):
                         "->", 1
                     )
 
-                    source = source.strip().lower()
-                    target = target.strip().lower()
-                    cls = class_name.strip().lower()
+                    source = self._normalize_class(source)
+                    target = self._normalize_class(target)
+                    cls = self._normalize_class(class_name)
 
                     if (
                         image_side == "t1"

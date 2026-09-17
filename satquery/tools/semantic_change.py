@@ -73,8 +73,29 @@ class SemanticChangeTool(SatQueryTool):
 
         total_changed_pixels = sum(transitions.values())
 
+        class_counts = {"t1": {}, "t2": {}}
+
+        for class_id in np.unique(label_t1):
+            name = self.LABELS.get(
+                int(class_id),
+                f"unknown_{class_id}"
+            )
+            class_counts["t1"][name] = int(
+                np.count_nonzero(label_t1 == class_id)
+            )
+
+        for class_id in np.unique(label_t2):
+            name = self.LABELS.get(
+                int(class_id),
+                f"unknown_{class_id}"
+            )
+            class_counts["t2"][name] = int(
+                np.count_nonzero(label_t2 == class_id)
+            )
+
         data = {
             "transitions": transitions,
+            "class_counts": class_counts,
             "total_changed_pixels": total_changed_pixels,
             "valid_pixels": valid_pixels,
             "change_percentage": (
