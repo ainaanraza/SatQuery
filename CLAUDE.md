@@ -41,6 +41,15 @@ Unloadable inputs and too few images for the operation are recorded as errors be
 
 Change pipeline: `change_detection` reads the overlap of both rasters onto image A's grid (area-averaged, capped at `max_size` px per side). It scores each pixel by the mean, across bands, of the absolute difference divided by that band's 2nd-98th percentile span, then thresholds the score (default 0.15). `change_localization` groups the resulting mask into connected regions (pure-numpy BFS on a coarse grid; there is no scipy dependency) and computes the area in m². `spatial_alignment` fails the plan on a CRS mismatch or no overlap.
 
+Shared co-registration lives in `multimodal/registration.py` (`common_grid`, `read_on_grid`). Both change detection and fusion use it; use it for any new tool that compares two rasters.
+
+Optical-SAR fusion (`tools/optical_sar_fusion.py` + `multimodal/`) maps water:
+- **SAR:** below −18 dB if the data is calibrated (float dB, or linear power converted to dB); below an Otsu threshold if it is uncalibrated integer DN.
+- **Optical:** NDWI > 0, but only when green and NIR bands are identified from band descriptions (B3/B8/green/nir).
+- **Output:** each sensor's water fraction, their agreement, and the SAR water regions and area.
+
+The tool works out which input is optical and which is SAR from `RSImage.modality`, which comes from the sensor tag or band names (VV/VH → SAR). If the modality is unknown, it accepts a SAR input only if it has ≤2 bands, and otherwise refuses instead of guessing.
+
 Tools: subclass `SatQueryTool` (`tools/base.py`), set `name`, and implement `execute(context, arguments) -> ToolResult`. Register new tools in `tools/__init__.py::get_default_registry`, then reference them from the planner.
 
 Models: `tools/model.py` (`vision.answer`) → `models/manager.py::ModelManager` (caches one loaded instance per provider name) → `models/registry.py`. Unknown provider names log a warning and fall back to `MockProvider`. `MockProvider` ignores the image and returns `"[mock provider - no vision model loaded] Analyzed question: ..."`. Providers implement `MultimodalModelProvider.infer(ModelInferenceRequest) -> ModelInferenceResult` and put text in `predictions["text"]`.
@@ -53,7 +62,6 @@ Frontend: static `satquery/frontend/` (open `index.html` directly). The API URL 
 
 The README describes more than the code currently does. Check the code before trusting a feature description.
 
-- `optical_sar_fusion` only pairs the two inputs; `multimodal/` preprocessing and fusion are stubs.
 - The benchmark loader reads VRSBench-style, LLaVA-conversation, and simple Q/A JSON. The native RSVQA and CDVQA layouts (questions and answers in separate files) aren't parsed. No valid benchmark numbers have been published since the inflated scorer was removed.
 - Many packages are stubs or not connected to the agent: `semantic/`, `geospatial/`, `confidence/`, `storage/`, `datasets/`, `reproducibility/`, `performance/`, `visualization/`, `evaluation/` (only the benchmark CLI), `models/{health,lifecycle,hashing}.py`, `models/providers/huggingface.py`, `config/{development,production}.py`. `reasoning/` is used only by `tools/reasoning.py`, which isn't registered.
 - `docs/*.md` (PRODUCTION_*, OPERATIONS_RUNBOOK, etc.) mostly describe aspirational "phase" designs, not the current implementation. `docker-compose.yml` declares postgres/redis services that nothing uses.

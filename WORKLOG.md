@@ -14,8 +14,26 @@ Entry format:
 
 ---
 
-## 2026-10-19 — Acquisition dates, honest benchmark scoring, small fixes
+## 2026-10-19 — Optical-SAR water fusion (Phase 2, item 1)
 **Branch:** `feature/enhancements-and-completion`
+**What:**
+- `multimodal/registration.py`: shared `common_grid`/`read_on_grid` (overlap, CRS check, size-capped area-averaged resampling). Moved out of `change_detection.py`, which now uses them. `RegistrationStrategy` also checks overlap.
+- `multimodal/sar.py`: picks the VV > HH > VH > HV band from descriptions and detects calibration (`db`, `linear_power` → converted to dB, or `uncalibrated_dn`).
+- `multimodal/optical.py`: finds green/NIR from band descriptions (Sentinel-2 B3/B8 or names) and computes NDWI. Landsat "B5" is deliberately not treated as NIR, because it is red-edge on Sentinel-2.
+- `multimodal/fusion.py`: SAR water = backscatter < −18 dB (calibrated) or < Otsu threshold (DN). Optical water = NDWI > 0. Reports per-sensor water %, both / SAR-only / optical-only %, and agreement %.
+- `tools/optical_sar_fusion.py`: orders the inputs by detected modality (swapping if needed). It refuses two SAR inputs, two optical inputs, or an unknown-modality "SAR" input with more than 2 bands. It localizes SAR water regions with the existing `localize_change`, and builds a summary plus an interpretation caveat.
+- `inputs/metadata.py::detect_modality`: now uses band descriptions (VV/VH → SAR; B3/B8/NIR → optical) when there is no sensor tag. Before, it ignored the band names it was given.
+- Planner runs `spatial_alignment` before fusion; synthesizer answers from the fusion summary.
+- Tests: `tests/tools/test_optical_sar_fusion.py` (12 tests; synthetic Sentinel-2-like optical + VV SAR with known water extents, plus calibration variants, modality swap and refusal, NDWI-unavailable, and end-to-end agent). Suite total: 49.
+
+**Why:** The fusion tool only echoed the two file paths, and `multimodal/` returned placeholder strings, even though the README lists Optical + SAR fusion as a core capability. Water and flood mapping is the standard, verifiable use of combining the two sensors.
+
+**Notes:**
+- Before the band-count guard, the RGB sample pair was "fused" into 87.9% water, because Otsu always splits an image into two classes. That pair is now refused with a reason.
+- No terrain or radar-shadow masking, speckle filtering, or reprojection yet. NDWI needs band descriptions in the GeoTIFF.
+
+## 2026-10-19 — Acquisition dates, honest benchmark scoring, small fixes
+**Branch:** `feature/enhancements-and-completion` · **Commit:** `6d7783d9`
 **What:**
 - **Acquisition dates** (`inputs/metadata.py`, `inputs/raster_loader.py`, `inputs/models.py`): `load_raster` now fills `acquisition_time`. It checks explicit acquisition tags first (`ACQUISITION_DATE`, `DATE_ACQUIRED`, `SENSING_TIME`, `PRODUCT_START_TIME`, …), then Sentinel/Landsat-style filename dates, then `TIFFTAG_DATETIME`. Timezone-aware values are converted to naive UTC so they can be compared. The new `RSImage.acquisition_time_source` records which source was used.
 - **Temporal alignment** (`tools/temporal_alignment.py`): warns when inputs arrive in reverse chronological order, or when a date came from the filename or `TIFFTAG_DATETIME`. Reports `before_path`/`after_path`.

@@ -29,6 +29,7 @@ class Planner:
                 "temporal": ResultRef("temporal_alignment"),
             }))
         elif op == "optical_sar_fusion" and len(state.inputs) >= 2:
+            plan.append(ToolCall(tool_name="spatial_alignment", arguments={"image_a": state.inputs[0], "image_b": state.inputs[1]}))
             plan.append(ToolCall(tool_name="optical_sar_fusion", arguments={"optical_image": state.inputs[0], "sar_image": state.inputs[1]}))
         else:
             for img in state.inputs:

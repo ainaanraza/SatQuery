@@ -4,6 +4,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from .models import RSImage
 
+SAR_BAND_TOKENS = {"vv", "vh", "hh", "hv"}
+OPTICAL_BAND_TOKENS = {"red", "green", "blue", "nir", "swir", "b2", "b3", "b4", "b8", "b02", "b03", "b04", "b08"}
+
 def detect_modality(metadata: dict, band_names: list) -> str:
     modality = "unknown"
     if "sensor" in metadata:
@@ -11,6 +14,16 @@ def detect_modality(metadata: dict, band_names: list) -> str:
         if "sentinel-1" in s or "sar" in s:
             modality = "sar"
         elif "sentinel-2" in s or "optical" in s:
+            modality = "optical"
+    if modality == "unknown" and band_names:
+        # Fall back to band descriptions, e.g. "VV"/"VH" (SAR) or "B3"/"NIR" (optical).
+        tokens = set()
+        for name in band_names:
+            if name:
+                tokens.update(re.split(r"[\s_\-]+", str(name).lower()))
+        if tokens & SAR_BAND_TOKENS:
+            modality = "sar"
+        elif tokens & OPTICAL_BAND_TOKENS:
             modality = "optical"
     return modality
 

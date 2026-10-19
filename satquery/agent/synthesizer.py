@@ -31,8 +31,8 @@ class Synthesizer:
                 limitations.append(data["interpretation"])
             elif fusion_results:
                 data = fusion_results[-1].data
-                answer = (f"Optical ({data['optical_source']}) and SAR ({data['sar_source']}) inputs were paired, "
-                          "but quantitative optical-SAR fusion analysis is not implemented yet.")
+                answer = data["summary"]
+                limitations.append(data["interpretation"])
             elif metadata_results:
                 answer = str(metadata_results[-1].data)
             else:
