@@ -35,3 +35,7 @@ wandb/
 *.pt
 *.pth
 benchmark_results.json
+
+# Local job database
+*.db
+*.db-journal

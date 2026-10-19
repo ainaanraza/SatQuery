@@ -11,7 +11,7 @@ SatQuery AI: an agentic remote-sensing Q&A system (ISRO AI Hackathon). A natural
 A local venv is at `.venv/` (Windows: `.venv/Scripts/python.exe`).
 
 ```bash
-pip install -e .                        # pyproject.toml; rasterio is NOT listed there and must be installed separately
+pip install -e .                        # pyproject.toml; rasterio is NOT listed there and must be installed separately (API tests also need fastapi + httpx==0.24.0)
 python -m pytest -q tests               # full suite (fast, CPU-only, uses mock model provider)
 python -m pytest tests/agent/test_agent.py::test_agent_vqa   # single test
 python -m satquery.agent_cli --query "..." --image test1.tif
@@ -23,11 +23,20 @@ python -m satquery.create_demo_raster   # generate synthetic GeoTIFFs
 
 There is no linter/formatter config and no CI.
 
-Environment variables: `SATQUERY_MODEL_PROVIDER` (`mock` default | `huggingface` | `hf_llava`), `SATQUERY_ENV`, `SATQUERY_DEVICE`. `hf_llava` needs a GPU and downloads `llava-hf/llava-1.5-7b-hf` + the `BigData-KSU/RS-llava-v1.5-7b-LoRA` adapter.
+Environment variables: `SATQUERY_MODEL_PROVIDER` (`mock` default | `huggingface` | `hf_llava`), `SATQUERY_DB_PATH` (job database, default `satquery_jobs.db`), `SATQUERY_ENV`, `SATQUERY_DEVICE`. `hf_llava` needs a GPU and downloads `llava-hf/llava-1.5-7b-hf` + the `BigData-KSU/RS-llava-v1.5-7b-LoRA` adapter.
 
 ## Architecture (active code path)
 
-Request flow: `api/app.py` (`POST /analyze`) → `jobs/manager.py` (in-memory dict; runs the job synchronously despite returning `"queued"`) → `agent/agent.py::SatQueryAgent.run`, which fills one `AgentState` (`agent/state.py`) through these stages:
+Request flow:
+1. `api/app.py` (`create_app()` factory; `POST /analyze` returns 202 immediately).
+2. `jobs/manager.py::JobManager` runs jobs on a single background worker thread. This is deliberate: there's one GPU model, which isn't safe to call concurrently. Every status change (`queued` → `running` → `completed`/`failed`) is saved through `storage/sqlite.py` to `SATQUERY_DB_PATH` (default `satquery_jobs.db`). On startup, jobs left queued or running are marked failed.
+3. `agent/agent.py::SatQueryAgent.run`, which fills one `AgentState` (`agent/state.py`) through the stages below.
+
+A job's `status` reflects execution only. A run that the agent refuses (bad inputs, incompatible images) still ends `completed`, with `result.success == false`.
+
+Other endpoints: `GET /analyze/{id}` and `GET /analyses?limit=`. API tests use `TestClient(create_app(JobManager(SQLiteBackend())))` with an in-memory database.
+
+The agent stages are:
 
 1. `agent/parser.py`: keyword matching picks an `operation`: `image_question_answering`, `change_analysis` ("change/before/after/difference"), `optical_sar_fusion` ("sar" and "optical"), or `metadata_query`.
 2. `agent/resolver.py`: turns string paths into `RSImage` (`inputs/models.py`) via `inputs/raster_loader.py` (rasterio). It also tries Colab paths (`/content/GeoChat`, `/content/data/VRSBench`), and images that fail to load are **silently dropped**.
@@ -67,12 +76,12 @@ Frontend: static `satquery/frontend/` (open `index.html` directly). The API URL 
 The README describes more than the code currently does. Check the code before trusting a feature description.
 
 - The benchmark loader reads VRSBench-style, LLaVA-conversation, and simple Q/A JSON. The native RSVQA and CDVQA layouts (questions and answers in separate files) aren't parsed. No valid benchmark numbers have been published since the inflated scorer was removed.
-- Many packages are stubs or not connected to the agent: `semantic/`, `geospatial/`, `confidence/`, `storage/`, `datasets/`, `reproducibility/`, `performance/`, `visualization/`, `evaluation/` (only the benchmark CLI), `models/{health,lifecycle,hashing}.py`, `models/providers/huggingface.py`, `config/{development,production}.py`. `reasoning/` is used only by `tools/reasoning.py`, which isn't registered.
+- Many packages are stubs or not connected to the agent: `semantic/`, `geospatial/`, `confidence/`, `storage/postgres.py`, `datasets/`, `reproducibility/`, `performance/`, `visualization/`, `evaluation/` (only the benchmark CLI), `models/{health,lifecycle,hashing}.py`, `models/providers/huggingface.py`, `config/{development,production}.py`. `reasoning/` is used only by `tools/reasoning.py`, which isn't registered.
 - `docs/*.md` (PRODUCTION_*, OPERATIONS_RUNBOOK, etc.) mostly describe aspirational "phase" designs, not the current implementation. `docker-compose.yml` declares postgres/redis services that nothing uses.
 
 ## Legacy GeoChat code
 
-`satquery/model/` (LLaVA/MPT architecture), `train/`, `serve/` (Gradio + controller/worker), `eval/batch_satquery_*.py`, `conversation.py`, `mm_utils.py`, `utils.py`, `scripts/*.sh` (DeepSpeed fine-tuning), and `playground/` all come from the original GeoChat training/serving stack. They pin old dependencies (`torch==2.0.1`, `transformers==4.31.0`) and are independent of the agent pipeline. Don't confuse `satquery/model/` (legacy) with `satquery/models/` (the active provider layer).
+`satquery/model/` (LLaVA/MPT architecture), `train/`, `serve/` (Gradio + controller/worker), `eval/batch_satquery_*.py`, `conversation.py`, `mm_utils.py`, `utils.py`, `scripts/*.sh` (DeepSpeed fine-tuning), and `playground/` all come from the original GeoChat training/serving stack. They pin old dependencies (`torch==2.0.1`, `transformers==4.31.0`) and are independent of the agent pipeline. Don't confuse `satquery/model/` (legacy) with `satquery/models/` (the active provider layer). `satquery/__init__.py` loads `SatQueryLlamaForCausalLM` lazily. Don't add eager imports of `satquery.model` there, because that pulls in torch/transformers and adds about 5 s to every import of `satquery`.
 
 ## Worklog
 

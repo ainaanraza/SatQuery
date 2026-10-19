@@ -209,6 +209,7 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
                 jsonOutput.textContent = JSON.stringify(statusData, null, 2);
                 resetBtn();
             } else {
+                statusBadge.textContent = statusData.status === 'running' ? 'Running Analysis...' : 'Queued...';
                 // Poll again after 1 second
                 setTimeout(() => pollJobStatus(jobId), 1000);
             }

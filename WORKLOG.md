@@ -14,8 +14,29 @@ Entry format:
 
 ---
 
-## 2026-10-19 — Evidence graph in API responses and dashboard (Phase 2, item 2)
+## 2026-10-19 — Async job API with SQLite persistence (Phase 2, item 3)
 **Branch:** `feature/enhancements-and-completion`
+**What:**
+- `storage/sqlite.py`: replaced the in-memory dict, which was named SQLite but didn't use it, with a real thread-safe SQLite store. It has an `analyses` table, JSON request/result columns, partial updates, `list_analyses(limit, statuses)`, and `close()`.
+- `jobs/manager.py`:
+  - Jobs run on a single-worker `ThreadPoolExecutor` via `start()`. One at a time on purpose, because of the single GPU model.
+  - Every status change is saved, and the agent instance is reused between jobs.
+  - `recover_interrupted()` marks jobs left queued or running by a crash or restart as failed.
+- `api/app.py`:
+  - Now a `create_app()` factory with a lifespan hook. The database is opened at startup, not at import, and stale jobs are recovered.
+  - `POST /analyze` returns `202` immediately. Before, the endpoint ran the whole analysis before responding, which blocked the event loop, while still reporting "queued".
+  - New `GET /analyses` endpoint lists recent jobs. Requests are validated: a non-empty query of at most 2000 characters, and at most 4 inputs.
+- `config/settings.py`: new `SATQUERY_DB_PATH` setting (default `satquery_jobs.db`); `*.db` added to `.gitignore`.
+- `satquery/__init__.py`: the legacy GeoChat `SatQueryLlamaForCausalLM` is now imported lazily. Before, every `import satquery` loaded torch and transformers. API import time dropped from 6.3 s to 1.2 s, and the test suite from about 29 s to about 3 s.
+- Frontend: the status badge shows "Queued..." / "Running Analysis..." while polling.
+- Tests: `tests/test_storage_and_jobs.py` (6) and `tests/api/test_api.py` (4, FastAPI `TestClient`). Suite total: 64. Installed `fastapi`, `httpx==0.24.0`, and `uvicorn` into `.venv`.
+
+**Why:** The API claimed to be asynchronous but blocked until each analysis finished, and every result was lost on restart. The `storage/` package existed for persistence but was never used.
+
+**Notes:** Checked with a real uvicorn server: `POST` returned 202 in 24 ms, the job went `running` → `completed` in the background, and its result survived a server restart. Jobs run one at a time, so a long VLM job delays the ones queued behind it.
+
+## 2026-10-19 — Evidence graph in API responses and dashboard (Phase 2, item 2)
+**Branch:** `feature/enhancements-and-completion` · **Commit:** `7f961ea8`
 **What:**
 - `agent/provenance.py` (new): `build_evidence_graph(state, response)` turns each run into a provenance graph of inputs → tool steps → answer. Edges come from the plan's arguments (an `RSImage` or `ResultRef`), so they show real data flow and need no per-tool code.
 - `evidence/graph.py`: `EvidenceGraph.to_dict()` and `parents()`; `link()` no longer creates duplicate edges.
