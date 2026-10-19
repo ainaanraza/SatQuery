@@ -23,19 +23,31 @@ class SpatialAlignmentTool(SatQueryTool):
         overlap_y = (a_miny < b_maxy and a_maxy > b_miny)
         overlap = overlap_x and overlap_y
 
-        compatible = same_crs and same_resolution and overlap
-        
+        # Differing resolutions are resampled onto a common grid downstream, so only
+        # CRS and overlap determine compatibility.
+        compatible = same_crs and overlap
+
         data = {
             "same_crs": same_crs,
             "same_resolution": same_resolution,
             "overlap": overlap,
             "compatible": compatible
         }
-        
+
         ev = Evidence(
             source_type="metadata",
             source=f"{img_a.path}, {img_b.path}",
             tool=self.name,
             metadata=data
         )
-        return ToolResult(success=True, tool_name=self.name, data=data, evidence=[ev])
+
+        errors = []
+        if not same_crs:
+            errors.append(f"Images use different CRS ({img_a.crs} vs {img_b.crs}); reprojection is not supported yet.")
+        if not overlap:
+            errors.append("Images do not overlap spatially, so they cannot be compared.")
+        warnings = []
+        if compatible and not same_resolution:
+            warnings.append("Images have different resolutions; the second image will be resampled to the first image's grid.")
+
+        return ToolResult(success=compatible, tool_name=self.name, data=data, evidence=[ev], errors=errors, warnings=warnings)

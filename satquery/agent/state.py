@@ -7,6 +7,16 @@ from .parser import ParsedQuery
 from .intent import Intent
 
 @dataclass
+class ResultRef:
+    """Placeholder for a value produced by an earlier tool in the plan.
+
+    Resolved by the Executor from the latest successful result of `tool_name`;
+    `key` selects one field of that result's data (None means the whole data).
+    """
+    tool_name: str
+    key: Optional[str] = None
+
+@dataclass
 class ToolCall:
     tool_name: str
     arguments: dict

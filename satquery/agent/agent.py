@@ -5,6 +5,7 @@ from .resolver import InputResolver
 from .planner import Planner
 from .executor import Executor
 from .synthesizer import Synthesizer
+from satquery.inputs.exceptions import SatQueryInputError
 from satquery.tools import get_default_registry
 
 class SatQueryAgent:
@@ -18,26 +19,35 @@ class SatQueryAgent:
 
     def run(self, query: str, inputs: list):
         state = AgentState(query=query)
-        
+
         state.parsed_query = self.parser.parse(query)
         state.intent = Intent(name=state.parsed_query.operation, confidence=1.0)
-        
-        # In a real scenario, inputs might be paths or RSImage objects.
-        # If they are strings, we resolve them.
+
+        # Inputs may be paths (resolved to RSImage here) or RSImage objects.
+        # Unloadable paths are reported as errors rather than silently dropped.
         resolved_inputs = []
         for i in inputs:
             if isinstance(i, str):
-                resolved = self.resolver.resolve([i])
-                resolved_inputs.extend(resolved)
+                try:
+                    resolved_inputs.extend(self.resolver.resolve([i]))
+                except SatQueryInputError as e:
+                    state.errors.append(str(e))
             else:
                 resolved_inputs.append(i)
-                
+
         state.inputs = resolved_inputs
-        
-        self.planner.generate_plan(state)
-        
-        if self.planner.validate_plan(state):
-            self.executor.execute(state)
-            
+
+        required = len(state.parsed_query.required_inputs)
+        if not state.errors and len(state.inputs) < required:
+            state.errors.append(
+                f"Operation '{state.parsed_query.operation}' requires {required} input image(s), "
+                f"but {len(state.inputs)} were provided."
+            )
+
+        if not state.errors:
+            self.planner.generate_plan(state)
+            if self.planner.validate_plan(state):
+                self.executor.execute(state)
+
         response = self.synthesizer.synthesize(state)
         return response

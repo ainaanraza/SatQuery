@@ -69,20 +69,26 @@ class HuggingFaceLLaVAProvider(MultimodalModelProvider):
             prompt = request.prompt
             image_paths = getattr(request, "image_paths", [])
             
-            image = None
-            if image_paths and os.path.exists(image_paths[0]):
-                try:
-                    import rasterio
-                    with rasterio.open(image_paths[0]) as src:
-                        bands = src.read([1, 2, 3] if src.count >= 3 else [1, 1, 1])
-                        bands = np.transpose(bands, (1, 2, 0))
-                        if bands.max() > 0:
-                            bands = (bands / bands.max() * 255).astype(np.uint8)
-                        image = Image.fromarray(bands)
-                except Exception:
-                    image = Image.open(image_paths[0]).convert("RGB")
-            else:
-                image = Image.new("RGB", (336, 336), color=(34, 139, 34))
+            if not image_paths or not os.path.exists(image_paths[0]):
+                return ModelInferenceResult(
+                    status="error",
+                    provider="hf_llava",
+                    model_id="BigData-KSU/RS-llava-v1.5-7b-LoRA",
+                    model_version="1.5-7b",
+                    predictions={"text": f"Input image not found: {image_paths[0] if image_paths else '(none)'}"},
+                    confidence=0.0
+                )
+
+            try:
+                import rasterio
+                with rasterio.open(image_paths[0]) as src:
+                    bands = src.read([1, 2, 3] if src.count >= 3 else [1, 1, 1])
+                    bands = np.transpose(bands, (1, 2, 0))
+                    if bands.max() > 0:
+                        bands = (bands / bands.max() * 255).astype(np.uint8)
+                    image = Image.fromarray(bands)
+            except Exception:
+                image = Image.open(image_paths[0]).convert("RGB")
 
             formatted_prompt = f"USER: <image>\n{prompt}\nASSISTANT:"
             inputs = self.processor(text=formatted_prompt, images=image, return_tensors="pt").to(self.model.device)

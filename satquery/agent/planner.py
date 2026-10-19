@@ -1,4 +1,4 @@
-from .state import AgentState, ToolCall
+from .state import AgentState, ToolCall, ResultRef
 from satquery.tools.registry import ToolRegistry
 
 class Planner:
@@ -18,11 +18,18 @@ class Planner:
             plan.append(ToolCall(tool_name="temporal_alignment", arguments={"image_a": img_a, "image_b": img_b}))
             plan.append(ToolCall(tool_name="spatial_alignment", arguments={"image_a": img_a, "image_b": img_b}))
             plan.append(ToolCall(tool_name="change_detection", arguments={"image_a": img_a, "image_b": img_b, "method": "absolute_difference"}))
-            plan.append(ToolCall(tool_name="change_localization", arguments={"mask": "computed_mask"}))
-            plan.append(ToolCall(tool_name="change_summary", arguments={"statistics": {"change_percentage": 15.0}}))
+            plan.append(ToolCall(tool_name="change_localization", arguments={
+                "mask": ResultRef("change_detection", "mask"),
+                "transform": ResultRef("change_detection", "transform"),
+                "crs": ResultRef("change_detection", "crs"),
+            }))
+            plan.append(ToolCall(tool_name="change_summary", arguments={
+                "statistics": ResultRef("change_detection"),
+                "localization": ResultRef("change_localization"),
+                "temporal": ResultRef("temporal_alignment"),
+            }))
         elif op == "optical_sar_fusion" and len(state.inputs) >= 2:
             plan.append(ToolCall(tool_name="optical_sar_fusion", arguments={"optical_image": state.inputs[0], "sar_image": state.inputs[1]}))
-            plan.append(ToolCall(tool_name="change_summary", arguments={}))
         else:
             for img in state.inputs:
                 plan.append(ToolCall(tool_name="raster.preview", arguments={"image": img}))
