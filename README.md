@@ -29,17 +29,18 @@ Every response is anchored in a verifiable **Evidence Graph**, tying each natura
 
 ## Benchmark Evaluation Results
 
-SatQuery AI includes automated benchmark evaluation suites tested on real GPU hardware against standard Remote Sensing VQA datasets:
+SatQuery AI includes a benchmark harness for annotated remote-sensing VQA and captioning datasets (VRSBench-style JSON with `image_id`/`question`/`ground_truth`, LLaVA-style `conversations`, or simple question/answer lists).
 
-| Metric | VRSBench / RS-VQA Benchmark |
+> **Results pending re-evaluation.** Earlier figures reported here (75.00% accuracy, 79.20% concept coverage) came from a scorer that raised any reply over 30 characters to at least 75% and computed coverage as accuracy + 4.2. They have been withdrawn. Re-run the benchmark to get valid numbers.
+
+| Metric | Definition |
 | :--- | :--- |
-| **Model Evaluated** | `BigData-KSU/RS-llava-v1.5-7b-LoRA` (4-Bit Quantized) |
-| **Overall VQA Accuracy** | **`75.00%`** |
-| **BLEU-1 Semantic Relevance** | **`75.00%`** |
-| **Concept Coverage Rate** | **`79.20%`** |
-| **Inference Latency** | **~1.8s per raster on T4 GPU** |
+| `exact_match` | Normalized prediction equals the normalized ground truth |
+| `contains_match` | Normalized ground truth appears as a whole phrase in the (often verbose) prediction |
+| `token_f1` | Token-overlap F1 between prediction and ground truth |
+| `bleu_1` | Sentence-level BLEU-1 (clipped unigram precision × brevity penalty) |
 
-*Raw benchmark telemetry and predictions are automatically exported to `benchmark_results.json`.*
+Only samples with a ground-truth answer and a locatable image are scored. Failed inferences count as wrong. Per-question-type breakdowns and every prediction are written to `benchmark_results.json` (or the path given with `--output`).
 
 ---
 
@@ -116,17 +117,13 @@ git clone https://github.com/lx709/VRSBench.git /content/data/VRSBench
 python -m satquery.evaluation.benchmark --dataset /content/data/VRSBench --provider hf_llava --samples 50
 ```
 
-#### 2. Testing on RSVQA:
+#### 2. Testing on RSVQA / CDVQA or other datasets:
+RSVQA and CDVQA store questions and answers in separate files linked by ID, and that native layout is **not parsed yet**. Convert them to a JSON list of `{"image": ..., "question": ..., "answer": ..., "type": ...}` records (image paths may be relative to the JSON file or just a filename found anywhere under the dataset folder), then run:
 ```bash
-python -m satquery.evaluation.benchmark --dataset /path/to/RSVQA --provider hf_llava --samples 50
+python -m satquery.evaluation.benchmark --dataset /path/to/converted_dataset --provider hf_llava --samples 50
 ```
 
-#### 3. Testing on CDVQA (Change Detection VQA):
-```bash
-python -m satquery.evaluation.benchmark --dataset /path/to/CDVQA --provider hf_llava --samples 50
-```
-
-#### 4. Testing on Custom GeoTIFF Satellite Images:
+#### 3. Testing on Custom GeoTIFF Satellite Images:
 Place your own `.tif` / `.tiff` satellite files into the directory and evaluate:
 ```bash
 python -m satquery.agent_cli --query "Describe the agricultural density, water bodies, and roads" --image demo_satellite.tif
@@ -179,7 +176,7 @@ SatQuery AI Architecture:
 │   ├── tools/                 # Change detection, SAR fusion, preview tools
 │   └── create_demo_raster.py  # Multi-band GeoTIFF test generator
 ├── docs/                      # Phase audit and architecture reports
-├── benchmark_results.json     # Official VRSBench benchmark output artifact
+├── benchmark_results.json     # Benchmark output (generated, git-ignored)
 └── README.md
 ```
 

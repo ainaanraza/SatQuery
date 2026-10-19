@@ -20,6 +20,8 @@ class RSImage:
     nodata: Optional[float]
     dtype: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # Where acquisition_time came from: a metadata tag name, "filename", or None.
+    acquisition_time_source: Optional[str] = None
 
 @dataclass
 class RSImagePair:

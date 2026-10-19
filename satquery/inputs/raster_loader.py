@@ -1,6 +1,6 @@
 import rasterio
 from .models import RSImage
-from .metadata import detect_modality, detect_sensor
+from .metadata import detect_modality, detect_sensor, detect_acquisition_time
 from datetime import datetime
 
 def load_raster(path: str) -> RSImage:
@@ -10,8 +10,8 @@ def load_raster(path: str) -> RSImage:
         crs = src.crs.to_string() if src.crs else None
         
         meta = src.tags()
-        acq_time = None
-        
+        acq_time, acq_source = detect_acquisition_time(meta, path)
+
         modality = detect_modality(meta, src.descriptions)
         sensor = detect_sensor(meta)
         
@@ -31,5 +31,6 @@ def load_raster(path: str) -> RSImage:
             band_names=list(src.descriptions) if any(src.descriptions) else [f"Band_{i}" for i in range(1, src.count+1)],
             nodata=src.nodata,
             dtype=src.dtypes[0] if src.dtypes else "unknown",
-            metadata=meta
+            metadata=meta,
+            acquisition_time_source=acq_source
         )

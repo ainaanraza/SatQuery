@@ -14,12 +14,14 @@ ORIGIN_X, ORIGIN_Y, PIXEL = 500000.0, 1400000.0, 10.0
 CRS = "EPSG:32643"
 
 
-def write_raster(path, data, origin_x=ORIGIN_X, crs=CRS, nodata=None):
+def write_raster(path, data, origin_x=ORIGIN_X, crs=CRS, nodata=None, tags=None):
     with rasterio.open(
         path, "w", driver="GTiff", height=data.shape[1], width=data.shape[2], count=data.shape[0],
         dtype=data.dtype, crs=crs, transform=from_origin(origin_x, ORIGIN_Y, PIXEL, PIXEL), nodata=nodata,
     ) as dst:
         dst.write(data)
+        if tags:
+            dst.update_tags(**tags)
     return str(path)
 
 
@@ -160,3 +162,16 @@ def test_agent_reports_missing_input():
     assert response.answer.startswith("Failed due to errors")
     assert "does_not_exist.tif" in response.answer
     assert response.evidence == []
+
+
+def test_agent_change_analysis_uses_acquisition_dates(tmp_path, base_array):
+    after = base_array.copy()
+    after[:, 10:30, 60:80] = 255
+    earlier = write_raster(tmp_path / "x.tif", base_array, tags={"ACQUISITION_DATE": "2021-05-01"})
+    later = write_raster(tmp_path / "y.tif", after, tags={"ACQUISITION_DATE": "2023-05-01"})
+
+    # Passed in reverse order: the agent should reorder by date and say so.
+    response = SatQueryAgent().run("What changed after construction?", inputs=[later, earlier])
+
+    assert "Acquisition order: 2021-05-01 00:00:00 -> 2023-05-01 00:00:00." in response.answer
+    assert any("reverse chronological order" in lim for lim in response.limitations)

@@ -14,8 +14,28 @@ Entry format:
 
 ---
 
-## 2026-10-19 — Real change detection pipeline and honest failure handling
+## 2026-10-19 — Acquisition dates, honest benchmark scoring, small fixes
 **Branch:** `feature/enhancements-and-completion`
+**What:**
+- **Acquisition dates** (`inputs/metadata.py`, `inputs/raster_loader.py`, `inputs/models.py`): `load_raster` now fills `acquisition_time`. It checks explicit acquisition tags first (`ACQUISITION_DATE`, `DATE_ACQUIRED`, `SENSING_TIME`, `PRODUCT_START_TIME`, …), then Sentinel/Landsat-style filename dates, then `TIFFTAG_DATETIME`. Timezone-aware values are converted to naive UTC so they can be compared. The new `RSImage.acquisition_time_source` records which source was used.
+- **Temporal alignment** (`tools/temporal_alignment.py`): warns when inputs arrive in reverse chronological order, or when a date came from the filename or `TIFFTAG_DATETIME`. Reports `before_path`/`after_path`.
+- **Benchmark** (`evaluation/benchmark.py`, `evaluation/metrics.py`):
+  - Removed the 75% score floor and the fabricated "concept coverage" (accuracy + 4.2).
+  - Removed the invented ground truth ("harbor, vessels, …") for unlabeled samples, and the silent `test1.tif` fallback for missing images.
+  - The loader now resolves VRSBench `image_id` references (previously ignored, so samples were scored against `test1.tif`), handles caption records, and counts skipped samples by reason.
+  - Reports `exact_match`, `contains_match`, `token_f1`, and `bleu_1`, overall and per question type, with the real model id. Added an `--output` flag.
+  - The `iou` metric was a stub returning 0; it is now a real box IoU.
+- **README**: withdrew the 75.00% / 79.20% figures pending re-evaluation, documented the metrics, and corrected the RSVQA/CDVQA claims (the native formats are not parsed yet).
+- **Parser** (`agent/parser.py`): whole-word keyword matching ("necessary" no longer triggers SAR fusion, "exchange" no longer triggers change analysis); also accepts "radar" and "multispectral".
+- **Models** (`models/manager.py`, `models/registry.py`): one cached instance per provider name instead of a single global one that ignored later requests. An unknown provider name now logs a warning.
+- Tests: 14 new tests (date parsing and sources, end-to-end reverse-order dates, parser, model manager, metrics, benchmark loader and scoring). Suite total: 38.
+
+**Why:** The temporal half of change analysis could never work without dates. The README's headline benchmark numbers came from the scorer's floor and fabricated coverage, not from model quality, and VRSBench samples weren't even evaluated on their own images. For an evaluated submission, invalid metrics are a bigger risk than missing ones.
+
+**Notes:** Valid benchmark numbers need a GPU re-run (`python -m satquery.evaluation.benchmark --dataset <VRSBench> --provider hf_llava`). Native RSVQA/CDVQA loaders remain to be done.
+
+## 2026-10-19 — Real change detection pipeline and honest failure handling
+**Branch:** `feature/enhancements-and-completion` · **Commit:** `c83b7c2a`
 **What:**
 - `tools/change_detection.py`: computes real pixel-level change over the spatial overlap of two rasters (area-averaged onto image A's grid, capped at 2048 px per side). It ignores nodata/NaN pixels, scales each band's difference by its joint 2–98 percentile span, takes the mean across bands, and applies a threshold (default 0.15). Returns the boolean mask, its geotransform, and the CRS. The existing count-based path and its input validation are kept.
 - `tools/change_localization.py`: groups the change mask into 4-connected regions (pure-numpy BFS on a ≤64×64 cell grid, so no scipy dependency). Reports geographic bounds and m² area per region and overall (exact for projected CRS, equirectangular approximation for geographic CRS).

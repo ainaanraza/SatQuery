@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -12,10 +13,11 @@ class ParsedQuery:
 
 class QueryUnderstandingBackend:
     def parse(self, query: str) -> ParsedQuery:
-        q = query.lower()
-        temporal = any(kw in q for kw in ["change", "before", "after", "difference"])
-        cross_modal = "sar" in q and "optical" in q
-        
+        # Whole-word matching, so e.g. "necessary" does not match "sar".
+        words = set(re.findall(r"[a-z0-9-]+", query.lower()))
+        temporal = bool(words & {"change", "changes", "changed", "before", "after", "difference", "differences"})
+        cross_modal = bool(words & {"sar", "radar"}) and bool(words & {"optical", "multispectral"})
+
         op = "image_question_answering"
         req = ["image"]
         if cross_modal:
@@ -24,7 +26,7 @@ class QueryUnderstandingBackend:
         elif temporal:
             op = "change_analysis"
             req = ["image_a", "image_b"]
-        elif "sensor" in q or "resolution" in q or "metadata" in q:
+        elif words & {"sensor", "resolution", "metadata"}:
             op = "metadata_query"
             
         return ParsedQuery(

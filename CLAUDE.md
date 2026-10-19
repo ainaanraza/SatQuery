@@ -35,13 +35,15 @@ Request flow: `api/app.py` (`POST /analyze`) → `jobs/manager.py` (in-memory di
 4. `agent/executor.py`: runs the calls in order and merges each `ToolResult`'s evidence, errors, and warnings into the state. It **stops at the first failed tool**. Planner arguments can be `ResultRef(tool_name, key)` placeholders, which the executor replaces with that field of an earlier tool's `data`. This is how real outputs flow between steps, e.g. `change_detection`'s mask goes to `change_localization`.
 5. `agent/synthesizer.py`: the answer comes from `vision.answer`, then `change_summary`, then `optical_sar_fusion`, then `raster.metadata`, or becomes an error message if `state.errors` is non-empty. Tool warnings become `limitations`. `confidence` is the minimum of the model-derived evidence confidences, or `None` if no model was involved.
 
+Acquisition dates (`inputs/metadata.py::detect_acquisition_time`) are looked up in this order: explicit acquisition tags, then a date in a Sentinel/Landsat-style filename, then `TIFFTAG_DATETIME` as a last resort (often the processing date). `RSImage.acquisition_time_source` records which one was used, and `temporal_alignment` turns non-tag sources into warnings.
+
 Unloadable inputs and too few images for the operation are recorded as errors before planning starts. Nothing is silently dropped.
 
 Change pipeline: `change_detection` reads the overlap of both rasters onto image A's grid (area-averaged, capped at `max_size` px per side). It scores each pixel by the mean, across bands, of the absolute difference divided by that band's 2nd-98th percentile span, then thresholds the score (default 0.15). `change_localization` groups the resulting mask into connected regions (pure-numpy BFS on a coarse grid; there is no scipy dependency) and computes the area in m². `spatial_alignment` fails the plan on a CRS mismatch or no overlap.
 
 Tools: subclass `SatQueryTool` (`tools/base.py`), set `name`, and implement `execute(context, arguments) -> ToolResult`. Register new tools in `tools/__init__.py::get_default_registry`, then reference them from the planner.
 
-Models: `tools/model.py` (`vision.answer`) → `models/manager.py::ModelManager` (a process-wide singleton that caches the **first** provider loaded) → `models/registry.py`. Unknown provider names fall back to `MockProvider` without any warning. `MockProvider` ignores the image and returns `"[mock provider - no vision model loaded] Analyzed question: ..."`. Providers implement `MultimodalModelProvider.infer(ModelInferenceRequest) -> ModelInferenceResult` and put text in `predictions["text"]`.
+Models: `tools/model.py` (`vision.answer`) → `models/manager.py::ModelManager` (caches one loaded instance per provider name) → `models/registry.py`. Unknown provider names log a warning and fall back to `MockProvider`. `MockProvider` ignores the image and returns `"[mock provider - no vision model loaded] Analyzed question: ..."`. Providers implement `MultimodalModelProvider.infer(ModelInferenceRequest) -> ModelInferenceResult` and put text in `predictions["text"]`.
 
 Evidence: each tool should emit `evidence.models.Evidence` records (source, tool, bounds/CRS/transform, confidence). `evidence/graph.py::EvidenceGraph` exists but the agent doesn't use it.
 
@@ -52,8 +54,7 @@ Frontend: static `satquery/frontend/` (open `index.html` directly). The API URL 
 The README describes more than the code currently does. Check the code before trusting a feature description.
 
 - `optical_sar_fusion` only pairs the two inputs; `multimodal/` preprocessing and fusion are stubs.
-- `load_raster` never reads acquisition dates, so `temporal_alignment` always reports order `unknown`.
-- `evaluation/benchmark.py` inflates scores: any reply over 30 characters containing a generic word like "image" or "area" is raised to at least 75%, and "concept coverage" is computed as accuracy + 4.2. The README benchmark numbers come from these rules.
+- The benchmark loader reads VRSBench-style, LLaVA-conversation, and simple Q/A JSON. The native RSVQA and CDVQA layouts (questions and answers in separate files) aren't parsed. No valid benchmark numbers have been published since the inflated scorer was removed.
 - Many packages are stubs or not connected to the agent: `semantic/`, `geospatial/`, `confidence/`, `storage/`, `datasets/`, `reproducibility/`, `performance/`, `visualization/`, `evaluation/` (only the benchmark CLI), `models/{health,lifecycle,hashing}.py`, `models/providers/huggingface.py`, `config/{development,production}.py`. `reasoning/` is used only by `tools/reasoning.py`, which isn't registered.
 - `docs/*.md` (PRODUCTION_*, OPERATIONS_RUNBOOK, etc.) mostly describe aspirational "phase" designs, not the current implementation. `docker-compose.yml` declares postgres/redis services that nothing uses.
 
