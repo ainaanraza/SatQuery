@@ -15,6 +15,77 @@ document.querySelectorAll('.preset-chip').forEach(chip => {
     });
 });
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
+function fileName(path) {
+    return String(path || '').split(/[\/]/).pop();
+}
+
+function nodeLabel(node) {
+    if (!node) return '';
+    if (node.type === 'input') return fileName(node.data.path);
+    if (node.type === 'tool') return node.data.tool;
+    return 'answer';
+}
+
+// Key facts worth showing per tool, picked from its first evidence record's metadata.
+const STEP_FACTS = {
+    temporal_alignment: m => [`order: ${m.temporal_order}`],
+    spatial_alignment: m => [`same CRS: ${m.same_crs}`, `overlap: ${m.overlap}`],
+    change_detection: m => [`${m.change_percentage}% changed`, `${m.changed_pixel_count} / ${m.valid_pixel_count} px`],
+    change_localization: m => m.changed_area_sqm != null ? [`${Math.round(m.changed_area_sqm).toLocaleString()} m²`, `${m.region_count} region(s)`] : [],
+    optical_sar_fusion: m => m.statistics ? [`SAR water ${m.statistics.sar_water_percentage}%`]
+        .concat(m.statistics.agreement_percentage != null ? [`agreement ${m.statistics.agreement_percentage}%`] : []) : [],
+};
+
+function renderEvidenceGraph(graph) {
+    if (!graph || !graph.nodes || !graph.nodes.length) {
+        return '<div style="color: #94a3b8; font-size: 0.85rem;">No evidence was produced.</div>';
+    }
+    const byId = Object.fromEntries(graph.nodes.map(n => [n.id, n]));
+    const parentsOf = id => graph.edges.filter(e => e.target === id).map(e => nodeLabel(byId[e.source]));
+
+    return graph.nodes.map(node => {
+        const parents = parentsOf(node.id);
+        const from = parents.length ? `<div class="node-tool">derived from: ${parents.map(p => `<code>${escapeHtml(p)}</code>`).join(', ')}</div>` : '';
+        let tag, title, details = [], status = '';
+
+        if (node.type === 'input') {
+            const d = node.data;
+            tag = 'INPUT';
+            title = fileName(d.path);
+            details = [d.modality, d.crs, `${d.width}×${d.height}`, `${d.band_count} band(s)`, d.acquisition_time ? `acquired ${d.acquisition_time}` : 'acquisition date unknown'];
+        } else if (node.type === 'tool') {
+            const d = node.data;
+            const meta = (d.evidence && d.evidence[0] && d.evidence[0].metadata) || {};
+            tag = 'STEP';
+            title = d.tool;
+            details = (STEP_FACTS[d.tool] || (() => []))(meta).concat(d.errors || []);
+            status = d.success ? '<span class="node-status ok">passed</span>' : '<span class="node-status fail">failed</span>';
+        } else {
+            tag = 'ANSWER';
+            title = node.data.source_tool ? `answered from ${node.data.source_tool}` : 'no answer produced';
+        }
+
+        return `
+            <div class="evidence-node">
+                <div class="node-left">
+                    <span class="node-tag">${tag}</span>
+                    <div>
+                        <div class="node-src">${escapeHtml(title)}</div>
+                        ${from}
+                        ${details.filter(Boolean).length ? `<div class="node-tool">${details.filter(Boolean).map(escapeHtml).join(' · ')}</div>` : ''}
+                    </div>
+                </div>
+                ${status}
+            </div>`;
+    }).join('');
+}
+
 // Raw JSON view toggle
 const toggleJsonBtn = document.getElementById('toggleJsonBtn');
 const jsonViewerWrapper = document.getElementById('jsonViewerWrapper');
@@ -102,38 +173,30 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
             const statusData = await statusResponse.json();
 
             if (statusData.status === 'completed') {
-                statusBadge.textContent = 'Intelligence Ready';
-                statusBadge.className = 'status-badge completed';
-                
                 const result = statusData.result || {};
-                
-                // Format AI Answer
+                const succeeded = result.success !== false;
+
+                statusBadge.textContent = succeeded ? 'Intelligence Ready' : 'Analysis Refused';
+                statusBadge.className = 'status-badge ' + (succeeded ? 'completed' : 'failed');
+
                 aiAnswer.textContent = result.answer || 'Analysis complete.';
-                
-                // Format Evidence Nodes (clean and professional)
-                const evidenceList = result.evidence || [];
-                if (evidenceList.length > 0) {
-                    evidenceNodes.innerHTML = evidenceList.map((ev, idx) => `
-                        <div class="evidence-node">
-                            <div class="node-left">
-                                <span class="node-tag">NODE ${idx + 1}</span>
-                                <div>
-                                    <div class="node-src">${ev.source || 'Raster Layer'}</div>
-                                    <div class="node-tool">Tool: <code>${ev.tool || 'inference'}</code></div>
-                                </div>
-                            </div>
-                            <div style="font-size: 0.8rem; color: #34d399; font-weight: 600;">
-                                ${ev.confidence ? 'Confidence: ' + Math.round(ev.confidence * 100) + '%' : 'Verified'}
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    evidenceNodes.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem;">No auxiliary evidence nodes generated.</div>';
+                if (result.limitations && result.limitations.length) {
+                    const list = document.createElement('ul');
+                    list.className = 'limitations-list';
+                    result.limitations.forEach(text => {
+                        const item = document.createElement('li');
+                        item.textContent = text;
+                        list.appendChild(item);
+                    });
+                    aiAnswer.appendChild(list);
                 }
 
-                // Confidence badge
-                const primaryConf = evidenceList.find(e => e.confidence)?.confidence || 0.92;
-                confidenceBadge.innerHTML = `<span class="confidence-val">Confidence: ${Math.round(primaryConf * 100)}%</span>`;
+                evidenceNodes.innerHTML = renderEvidenceGraph(result.evidence_graph);
+
+                // Confidence only exists when a probabilistic model contributed.
+                confidenceBadge.innerHTML = typeof result.confidence === 'number'
+                    ? `<span class="confidence-val">Model confidence: ${Math.round(result.confidence * 100)}%</span>`
+                    : `<span class="confidence-val">${succeeded ? 'Deterministic measurement' : 'No result'}</span>`;
 
                 // Raw JSON
                 jsonOutput.textContent = JSON.stringify(statusData, null, 2);

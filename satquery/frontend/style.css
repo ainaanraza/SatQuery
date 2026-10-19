@@ -683,3 +683,27 @@ textarea:focus, input[type="text"]:focus {
     overflow-y: auto;
     white-space: pre-wrap;
 }
+
+.node-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.node-status.ok {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.12);
+}
+
+.node-status.fail {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
+}
+
+.limitations-list {
+    margin: 12px 0 0;
+    padding-left: 18px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}

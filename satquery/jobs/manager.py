@@ -1,4 +1,5 @@
 import uuid
+from satquery.visualization.serialization import to_jsonable
 
 class JobManager:
     def __init__(self):
@@ -23,12 +24,16 @@ class JobManager:
                 agent = SatQueryAgent()
                 response = agent.run(query=query, inputs=inputs)
                 
-                # Convert dataclass to dict for JSON serialization
-                result_dict = {
+                result_dict = to_jsonable({
+                    "success": response.success,
                     "answer": response.answer,
-                    "evidence": [vars(ev) for ev in response.evidence],
-                    "limitations": response.limitations
-                }
+                    "answer_source": response.answer_source,
+                    "confidence": response.confidence,
+                    "errors": response.errors,
+                    "limitations": response.limitations,
+                    "evidence": response.evidence,
+                    "evidence_graph": response.evidence_graph,
+                })
                 
                 self.jobs[job_id]["status"] = "completed"
                 self.jobs[job_id]["result"] = result_dict

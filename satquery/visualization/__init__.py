@@ -1,1 +1,1 @@
-from .serialization import to_geojson
+from .serialization import to_geojson, to_jsonable

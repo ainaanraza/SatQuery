@@ -14,8 +14,27 @@ Entry format:
 
 ---
 
-## 2026-10-19 — Optical-SAR water fusion (Phase 2, item 1)
+## 2026-10-19 — Evidence graph in API responses and dashboard (Phase 2, item 2)
 **Branch:** `feature/enhancements-and-completion`
+**What:**
+- `agent/provenance.py` (new): `build_evidence_graph(state, response)` turns each run into a provenance graph of inputs → tool steps → answer. Edges come from the plan's arguments (an `RSImage` or `ResultRef`), so they show real data flow and need no per-tool code.
+- `evidence/graph.py`: `EvidenceGraph.to_dict()` and `parents()`; `link()` no longer creates duplicate edges.
+- `agent/synthesizer.py`: `SatQueryResponse` gains `errors`, `answer_source`, `evidence_graph`, and a `success` property.
+- `visualization/serialization.py`: new `to_jsonable` (datetimes, numpy, Affine, dataclasses, tuples).
+- `jobs/manager.py`: job results now include `success`, `confidence`, `errors`, `answer_source`, and `evidence_graph`, as strict JSON. Before, `vars(ev)` passed raw objects through, and confidence was missing entirely.
+- Frontend:
+  - The evidence panel renders the graph: inputs (with CRS, size, acquisition date), each step with pass/fail, what it was derived from, and key facts. Limitations are listed under the answer.
+  - Failed analyses show "Analysis Refused" instead of "Intelligence Ready".
+  - Confidence is shown only when a model contributed. The fake `|| 0.92` default and the hard-coded "Confidence: 92%" in the HTML are gone.
+  - All server strings are HTML-escaped. Before, `innerHTML` interpolated file paths and tool names directly, which was an XSS risk.
+- Tests: `tests/agent/test_provenance.py` (5 tests: change-analysis edges, failure linking, VQA, strict-JSON job result, `to_jsonable`). Suite total: 54.
+
+**Why:** The README promises a "Verifiable Evidence Graph", but `EvidenceGraph` was never built. The dashboard listed flat evidence rows with an invented 92% confidence, and labelled failed runs as successful.
+
+**Notes:** I checked the frontend rendering by running `renderEvidenceGraph` in Node on a real job result. It hasn't been checked in a browser against a live API: FastAPI isn't installed in the local `.venv`.
+
+## 2026-10-19 — Optical-SAR water fusion (Phase 2, item 1)
+**Branch:** `feature/enhancements-and-completion` · **Commit:** `2de41f9d`
 **What:**
 - `multimodal/registration.py`: shared `common_grid`/`read_on_grid` (overlap, CRS check, size-capped area-averaged resampling). Moved out of `change_detection.py`, which now uses them. `RegistrationStrategy` also checks overlap.
 - `multimodal/sar.py`: picks the VV > HH > VH > HV band from descriptions and detects calibration (`db`, `linear_power` → converted to dB, or `uncalibrated_dn`).

@@ -5,6 +5,7 @@ from .resolver import InputResolver
 from .planner import Planner
 from .executor import Executor
 from .synthesizer import Synthesizer
+from .provenance import build_evidence_graph
 from satquery.inputs.exceptions import SatQueryInputError
 from satquery.tools import get_default_registry
 
@@ -50,4 +51,5 @@ class SatQueryAgent:
                 self.executor.execute(state)
 
         response = self.synthesizer.synthesize(state)
+        response.evidence_graph = build_evidence_graph(state, response).to_dict()
         return response

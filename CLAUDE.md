@@ -54,9 +54,13 @@ Tools: subclass `SatQueryTool` (`tools/base.py`), set `name`, and implement `exe
 
 Models: `tools/model.py` (`vision.answer`) → `models/manager.py::ModelManager` (caches one loaded instance per provider name) → `models/registry.py`. Unknown provider names log a warning and fall back to `MockProvider`. `MockProvider` ignores the image and returns `"[mock provider - no vision model loaded] Analyzed question: ..."`. Providers implement `MultimodalModelProvider.infer(ModelInferenceRequest) -> ModelInferenceResult` and put text in `predictions["text"]`.
 
-Evidence: each tool should emit `evidence.models.Evidence` records (source, tool, bounds/CRS/transform, confidence). `evidence/graph.py::EvidenceGraph` exists but the agent doesn't use it.
+Evidence: each tool should emit `evidence.models.Evidence` records (source, tool, bounds/CRS/transform, confidence). Keep `Evidence.metadata` JSON-friendly; don't put arrays or `Affine` objects in it.
 
-Frontend: static `satquery/frontend/` (open `index.html` directly). The API URL is hard-coded on line 1 of `app.js` (`API_BASE_URL`).
+After synthesis, `agent/provenance.py::build_evidence_graph` builds an `EvidenceGraph` of inputs → tool steps → answer and stores it in `response.evidence_graph`. Edges are derived from the plan: an `RSImage` argument links that input to the step, and a `ResultRef` links the producing step. The answer is linked from the tool named in `response.answer_source`, or from the failing step. New tools get correct graph edges automatically, as long as they receive data through `ResultRef`.
+
+`jobs/manager.py` returns `success`, `answer`, `answer_source`, `confidence`, `errors`, `limitations`, `evidence`, and `evidence_graph`. It passes everything through `visualization/serialization.py::to_jsonable` (datetimes → ISO strings, arrays → shape summaries, Affine → 6-float lists).
+
+Frontend: static `satquery/frontend/` (open `index.html` directly). The API URL is hard-coded on line 1 of `app.js` (`API_BASE_URL`). `renderEvidenceGraph` draws the graph, and `STEP_FACTS` defines the facts shown per tool, so add an entry there for any new tool. Pass all server strings through `escapeHtml`.
 
 ## Known placeholders / incomplete areas
 
