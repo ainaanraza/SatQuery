@@ -56,6 +56,10 @@ The README describes more than the code currently does. Check the code before tr
 
 `satquery/model/` (LLaVA/MPT architecture), `train/`, `serve/` (Gradio + controller/worker), `eval/batch_satquery_*.py`, `conversation.py`, `mm_utils.py`, `utils.py`, `scripts/*.sh` (DeepSpeed fine-tuning), and `playground/` all come from the original GeoChat training/serving stack. They pin old dependencies (`torch==2.0.1`, `transformers==4.31.0`) and are independent of the agent pipeline. Don't confuse `satquery/model/` (legacy) with `satquery/models/` (the active provider layer).
 
+## Worklog
+
+`WORKLOG.md` tracks completed work. After finishing a feature, fix, or notable change, add an entry at the top using the format given in that file (what, why, short notes, branch/commit).
+
 ## Repo hygiene
 
-There is no `.gitignore`. `__pycache__/*.pyc` and `satquery.egg-info/` are tracked and show up as modified after any run. Don't commit them as part of feature work.
+`.gitignore` excludes bytecode, `*.egg-info/`, venvs, caches, `.env*`, and model weights. The sample rasters (`test1.tif`, `test2.tif`, `demo_satellite.tif`) are intentionally tracked.
