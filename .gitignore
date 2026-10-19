@@ -39,3 +39,6 @@ benchmark_results.json
 # Local job database
 *.db
 *.db-journal
+
+# Uploaded rasters
+uploads/

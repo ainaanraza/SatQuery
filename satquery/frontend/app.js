@@ -1,4 +1,19 @@
-const API_BASE_URL = 'https://eclipse-depot-ship-fiction.trycloudflare.com';
+// API location, in priority order: ?api=<url> (remembered for later visits), the page's own
+// origin when the dashboard is served by the API at /ui, a remembered URL, then a local server.
+function resolveApiBase() {
+    const fromQuery = new URLSearchParams(window.location.search).get('api');
+    if (fromQuery) {
+        try { localStorage.setItem('satqueryApiBase', fromQuery); } catch (e) {}
+        return fromQuery.replace(/\/+$/, '');
+    }
+    if (window.location.protocol.startsWith('http')) return window.location.origin;
+    try {
+        const saved = localStorage.getItem('satqueryApiBase');
+        if (saved) return saved.replace(/\/+$/, '');
+    } catch (e) {}
+    return 'http://127.0.0.1:8000';
+}
+const API_BASE_URL = resolveApiBase();
 
 // Helper to set preset image inputs
 function setImage(imgName) {
@@ -86,6 +101,75 @@ function renderEvidenceGraph(graph) {
     }).join('');
 }
 
+// Raster upload: files are stored by the API and their server paths fill the inputs field,
+// in selection order, so the user can check and reorder T1/T2 or optical/SAR before running.
+const fileUpload = document.getElementById('fileUpload');
+const uploadStatus = document.getElementById('uploadStatus');
+
+async function uploadFile(file) {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/uploads`, {
+        method: 'POST',
+        headers: { 'Bypass-Tunnel-Reminder': 'true' },
+        body: form
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    return body;
+}
+
+if (fileUpload) {
+    fileUpload.addEventListener('change', async () => {
+        const files = Array.from(fileUpload.files || []);
+        if (!files.length) return;
+        const uploaded = [];
+        const failures = [];
+        for (const [i, file] of files.entries()) {
+            uploadStatus.textContent = `Uploading ${i + 1}/${files.length}: ${file.name}...`;
+            try {
+                uploaded.push(await uploadFile(file));
+            } catch (error) {
+                failures.push(`${file.name}: ${error.message}`);
+            }
+        }
+        if (uploaded.length) {
+            document.getElementById('imageInputs').value = uploaded.map(u => u.path).join(', ');
+        }
+        const described = uploaded.map((u, i) =>
+            `${i + 1}. ${u.filename} (${u.band_count} band(s), ${u.modality}${u.acquisition_time ? ', ' + u.acquisition_time.slice(0, 10) : ''})`);
+        uploadStatus.textContent = [
+            uploaded.length ? `Uploaded in this order: ${described.join('  ')}` : '',
+            failures.length ? `Failed: ${failures.join('; ')}` : ''
+        ].filter(Boolean).join('  |  ');
+        uploadStatus.className = 'upload-status' + (failures.length ? ' has-error' : '');
+        fileUpload.value = '';
+    });
+}
+
+// Header badge reflects the provider the API is actually configured with.
+async function refreshBackendStatus() {
+    const badge = document.getElementById('backendStatus');
+    if (!badge) return;
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`, { headers: { 'Bypass-Tunnel-Reminder': 'true' } });
+        const health = await response.json();
+        badge.textContent = health.model_provider === 'mock'
+            ? 'API online · mock model (no VLM loaded)'
+            : `API online · ${health.model_provider} ${health.model_loaded ? '(loaded)' : '(loads on first query)'}`;
+    } catch (error) {
+        badge.textContent = `API unreachable at ${API_BASE_URL}`;
+    }
+}
+refreshBackendStatus();
+
+const ANSWER_SOURCE_LABELS = {
+    'vision.answer': 'Vision-Language Model Answer',
+    'change_summary': 'Change Measurement',
+    'optical_sar_fusion': 'Optical-SAR Water Fusion',
+    'raster.metadata': 'Raster Metadata',
+};
+
 // Raw JSON view toggle
 const toggleJsonBtn = document.getElementById('toggleJsonBtn');
 const jsonViewerWrapper = document.getElementById('jsonViewerWrapper');
@@ -142,7 +226,10 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
             body: JSON.stringify({ query, inputs })
         });
 
-        if (!submitResponse.ok) throw new Error(`Submission failed with HTTP ${submitResponse.status}`);
+        if (!submitResponse.ok) {
+            const detail = (await submitResponse.json().catch(() => ({}))).detail;
+            throw new Error(typeof detail === 'string' ? detail : `Submission failed with HTTP ${submitResponse.status}`);
+        }
 
         const data = await submitResponse.json();
         const analysisId = data.analysis_id;
@@ -180,6 +267,8 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
                 statusBadge.className = 'status-badge ' + (succeeded ? 'completed' : 'failed');
 
                 aiAnswer.textContent = result.answer || 'Analysis complete.';
+                document.getElementById('answerSourceTag').textContent =
+                    ANSWER_SOURCE_LABELS[result.answer_source] || (succeeded ? 'Analysis Result' : 'Analysis Refused');
                 if (result.limitations && result.limitations.length) {
                     const list = document.createElement('ul');
                     list.className = 'limitations-list';

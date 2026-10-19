@@ -11,7 +11,7 @@ SatQuery AI: an agentic remote-sensing Q&A system (ISRO AI Hackathon). A natural
 A local venv is at `.venv/` (Windows: `.venv/Scripts/python.exe`).
 
 ```bash
-pip install -e .                        # pyproject.toml; rasterio is NOT listed there and must be installed separately (API tests also need fastapi + httpx==0.24.0)
+pip install -e .                        # pyproject.toml (API tests also need httpx==0.24.0)
 python -m pytest -q tests               # full suite (fast, CPU-only, uses mock model provider)
 python -m pytest tests/agent/test_agent.py::test_agent_vqa   # single test
 python -m satquery.agent_cli --query "..." --image test1.tif
@@ -34,7 +34,13 @@ Request flow:
 
 A job's `status` reflects execution only. A run that the agent refuses (bad inputs, incompatible images) still ends `completed`, with `result.success == false`.
 
-Other endpoints: `GET /analyze/{id}` and `GET /analyses?limit=`. API tests use `TestClient(create_app(JobManager(SQLiteBackend())))` with an in-memory database.
+Other endpoints:
+- `GET /analyze/{id}` and `GET /analyses?limit=`.
+- `POST /uploads`, implemented in `api/uploads.py`. It streams the file to `SATQUERY_UPLOAD_DIR/<id>/<sanitized original name>` and validates it with `load_raster`. The original name is kept because it can carry the acquisition date.
+- `GET /health` reports the provider without loading the model.
+- The dashboard is served at `/ui/`, and `/` redirects there.
+
+`/analyze` rejects input paths outside the working directory, the upload directory, and `SATQUERY_INPUT_ROOTS` (an `os.pathsep`-separated list). API tests use `TestClient(create_app(JobManager(SQLiteBackend())))` with an in-memory database.
 
 The agent stages are:
 
@@ -69,7 +75,7 @@ After synthesis, `agent/provenance.py::build_evidence_graph` builds an `Evidence
 
 `jobs/manager.py` returns `success`, `answer`, `answer_source`, `confidence`, `errors`, `limitations`, `evidence`, and `evidence_graph`. It passes everything through `visualization/serialization.py::to_jsonable` (datetimes → ISO strings, arrays → shape summaries, Affine → 6-float lists).
 
-Frontend: static `satquery/frontend/` (open `index.html` directly). The API URL is hard-coded on line 1 of `app.js` (`API_BASE_URL`). `renderEvidenceGraph` draws the graph, and `STEP_FACTS` defines the facts shown per tool, so add an entry there for any new tool. Pass all server strings through `escapeHtml`.
+Frontend: static `satquery/frontend/`, served by the API at `/ui/`. `resolveApiBase()` in `app.js` picks the API URL in this order: `?api=` (remembered in localStorage), then the page origin when served over http(s), then the remembered URL, then `http://127.0.0.1:8000`. The header badge comes from `/health`, and the answer card's label comes from `answer_source` (`ANSWER_SOURCE_LABELS`). `renderEvidenceGraph` draws the graph, and `STEP_FACTS` defines the facts shown per tool, so add an entry there for any new tool. Pass all server strings through `escapeHtml`.
 
 ## Known placeholders / incomplete areas
 

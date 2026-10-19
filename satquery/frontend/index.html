@@ -34,7 +34,7 @@
             <div class="topbar-status">
                 <div class="status-pill">
                     <span class="pulse-dot"></span>
-                    <span id="backendStatus">RS-LLaVA-1.5-7B (4-Bit GPU) Online</span>
+                    <span id="backendStatus">Connecting to API...</span>
                 </div>
             </div>
         </header>
@@ -82,7 +82,10 @@
                             <span class="file-badge" onclick="setImage('demo_satellite.tif')">demo_satellite.tif</span>
                             <span class="file-badge" onclick="setImage('test1.tif')">test1.tif</span>
                             <span class="file-badge" onclick="setImage('demo_satellite.tif, test1.tif')">Bi-Temporal Pair</span>
+                            <label for="fileUpload" class="file-badge upload-label">Upload rasters...</label>
+                            <input type="file" id="fileUpload" multiple accept=".tif,.tiff,.png,.jpg,.jpeg" hidden>
                         </div>
+                        <div class="upload-status" id="uploadStatus"></div>
                     </div>
 
                     <button type="submit" id="submitBtn" class="glow-button">
@@ -107,7 +110,7 @@
                         <div class="node-line"></div>
                         <div class="node active" id="step3">
                             <span class="node-icon">3</span>
-                            <span>RS-LLaVA VLM</span>
+                            <span>Analysis Tools</span>
                         </div>
                         <div class="node-line"></div>
                         <div class="node active" id="step4">
@@ -130,7 +133,7 @@
                 <!-- Executive AI Summary Card -->
                 <div class="summary-card" id="summaryCard">
                     <div class="summary-header">
-                        <span class="card-tag">Multimodal VLM Synthesis</span>
+                        <span class="card-tag" id="answerSourceTag">Analysis Result</span>
                         <div class="confidence-badge" id="confidenceBadge">
                             <span class="confidence-val">Confidence: pending</span>
                         </div>

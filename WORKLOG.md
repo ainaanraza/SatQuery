@@ -14,8 +14,37 @@ Entry format:
 
 ---
 
-## 2026-10-19 — Async job API with SQLite persistence (Phase 2, item 3)
+## 2026-10-19 — Raster upload, same-origin dashboard, input path restriction (Phase 3, item 1)
 **Branch:** `feature/enhancements-and-completion`
+**What:**
+- `api/uploads.py` (new) + `POST /uploads`:
+  - Streams the upload to disk with a size limit (`SATQUERY_MAX_UPLOAD_MB`, default 500) and allows only .tif/.tiff/.png/.jpg/.jpeg.
+  - Validates the file by opening it with `load_raster`. Rejected uploads leave nothing behind.
+  - Sanitizes the file name, so `../../x.tif` becomes `x.tif`, but otherwise keeps it, so Sentinel/Landsat names still give an acquisition date.
+  - Returns the server path plus band, CRS, modality and date info.
+- `/analyze` now rejects inputs outside the working directory, the upload directory, and `SATQUERY_INPUT_ROOTS`. Before, anyone reaching the public Colab tunnel could probe arbitrary server paths, because "not found" and "unreadable" gave different errors.
+- The API serves the dashboard at `/ui/` (`/` redirects there).
+- New `GET /health` reports the configured provider and whether it is loaded, without triggering a model load.
+- Dashboard:
+  - The API URL is resolved automatically (`?api=`, same origin, remembered URL, localhost). This replaces the hard-coded, expired trycloudflare URL.
+  - New "Upload rasters..." control fills the inputs field in upload order and shows each file's band count, modality and date.
+  - API error details are shown instead of just the HTTP code.
+- Honest labels found during a browser check:
+  - The header said "RS-LLaVA-1.5-7B (4-Bit GPU) Online" even with the mock model; it now comes from `/health`.
+  - The answer card said "Multimodal VLM Synthesis" even for pixel measurements; it now shows the actual source.
+  - The pipeline step "RS-LLaVA VLM" is renamed "Analysis Tools".
+- `pyproject.toml`: added `python-multipart` (needed for uploads) and `rasterio`, which was used everywhere but never declared. README Colab steps updated: just open the tunnel URL.
+- Tests: 6 new API tests (upload → analyze, bad type, unreadable file, oversize file, filename traversal, path restriction, dashboard served, health without model load). Suite total: 70.
+
+**Why:** The dashboard could only analyze files already on the server, and it pointed at a dead tunnel URL, so judges had to edit JavaScript before anything worked. The header and answer labels also claimed a GPU VLM that wasn't necessarily running.
+
+**Notes:**
+- Checked in Chrome against a live uvicorn server: uploaded two GeoTIFFs, ran change detection and a VQA preset, and confirmed the evidence graph, labels and badges render with no console errors.
+- The "Optical + SAR Fusion" preset uses two RGB samples, so it now shows a refusal. A real SAR sample is needed to demo fusion.
+- Uploaded files are never cleaned up automatically.
+
+## 2026-10-19 — Async job API with SQLite persistence (Phase 2, item 3)
+**Branch:** `feature/enhancements-and-completion` · **Commit:** `5274de3e`
 **What:**
 - `storage/sqlite.py`: replaced the in-memory dict, which was named SQLite but didn't use it, with a real thread-safe SQLite store. It has an `analyses` table, JSON request/result columns, partial updates, `list_analyses(limit, statuses)`, and `close()`.
 - `jobs/manager.py`:

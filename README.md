@@ -58,7 +58,7 @@ To run the complete system with the **7B Neural VLM** on a free T4 GPU in Google
 ```bash
 !git clone https://github.com/ainaanraza/SatQuery.git /content/GeoChat
 %cd /content/GeoChat
-!pip install fastapi uvicorn pydantic rasterio transformers accelerate bitsandbytes peft
+!pip install fastapi uvicorn pydantic python-multipart rasterio transformers accelerate bitsandbytes peft
 ```
 
 #### Step 2: Run Dataset Benchmarks
@@ -98,9 +98,11 @@ for _ in range(15):
     except Exception:
         pass
 ```
-1. Copy the printed `https://...trycloudflare.com` URL.
-2. In `satquery/frontend/app.js`, set `const API_BASE_URL = '<YOUR_URL>';` (Line 1).
-3. Open `satquery/frontend/index.html` in your browser to test the interactive mission control dashboard.
+1. Open the printed `https://...trycloudflare.com` URL in your browser. The API serves the mission control dashboard at `/ui/` and the dashboard calls its own origin, so nothing needs editing.
+2. Use **Upload rasters...** to send your own GeoTIFF / PNG / JPEG files (up to 500 MB each, set by `SATQUERY_MAX_UPLOAD_MB`). Their server paths fill the inputs field in upload order; for change detection list the earlier image first, and for fusion list optical first, then SAR.
+3. To use the dashboard from a local copy (`file://`) or another host instead, append `?api=<API URL>` once; the dashboard remembers it.
+
+The API only reads rasters inside its working directory and upload folder. To analyze a mounted dataset elsewhere (for example `/content/data`), set `os.environ["SATQUERY_INPUT_ROOTS"] = "/content/data"` before starting the server.
 
 ---
 
